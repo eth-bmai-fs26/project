@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMAI FS26 - Project 1 - Meeting Task Assigner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 50px; }
+        
+        /* Modal Backdrop Styling */
+        #loadingOverlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .avatar-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 5px;
+        }
+
+        .employee-header {
+            font-size: 0.75rem;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .checkmark {
+            color: #198754;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <p class="mt-3 fw-bold text-secondary">Analyzing minutes and assigning tasks...</p>
+</div>
+
+<div class="container">
+    <div class="card shadow-sm p-4 mx-auto" style="max-width: 800px; border-radius: 15px;">
+        <h5 class="text-center text-secondary border-bottom pb-2">BMAI FS26 - Project 1 - Meeting Minutes Processor</h5>
+        
+        <div class="mt-3">
+            <label class="form-label small fw-bold">Paste Meeting Transcript</label>
+            <textarea id="minutes" class="form-control" rows="4">Manager: John, please update the SQL server today. Sarah, focus on the budget for Q4. Mike, please call the client. Elena, draft the press release. David, check the security logs.</textarea>
+        </div>
+        
+        <button onclick="runAI()" class="btn btn-dark w-100 mt-3">Extract & Assign Tasks</button>
+
+        <div class="mt-4 table-responsive table-container">
+            <table class="table table-hover align-middle mb-0" id="taskTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 40%;">Task Description</th>
+                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=john" class="avatar-img"><br>John</th>
+                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=sarah" class="avatar-img"><br>Sarah</th>
+                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=mike" class="avatar-img"><br>Mike</th>
+                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=elena" class="avatar-img"><br>Elena</th>
+                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=david" class="avatar-img"><br>David</th>
+                    </tr>
+                </thead>
+                <tbody id="taskBody">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted small py-4">No tasks assigned yet. Click the button above.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // List of employees corresponding to the table columns (indices 1 to 5)
+    const employees = ["John", "Sarah", "Mike", "Elena", "David"];
+
+    /**
+     * Dummy API function for non-Colab environments
+     */
+    async function fetchApi(text) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                // Simulating AI extraction based on the default text
+                resolve([
+                    { task: "Update the SQL server", owner: "John" },
+                    { task: "Focus on the budget for Q4", owner: "Sarah" },
+                    { task: "Call the client", owner: "Mike" },
+                    { task: "Draft the press release", owner: "Elena" },
+                    { task: "Check the security logs", owner: "David" }
+                ]);
+            }, 3000);
+        });
+    }
+
+    /**
+     * Main Logic
+     */
+    async function runAI() {
+        const overlay = document.getElementById('loadingOverlay');
+        const taskBody = document.getElementById('taskBody');
+        const transcript = document.getElementById('minutes').value;
+
+        // 1. Show Spinner Modal
+        overlay.style.display = 'flex';
+
+        try {
+            let data;
+            
+            // 2. Detect Environment
+            if (typeof google !== 'undefined' && google.colab) {
+                console.log("Colab detected. Calling kernel...");
+                const result = await google.colab.kernel.invokeFunction('notebook.ProcessMinutes', [transcript], {});
+                data = result.data['application/json'];
+            } else {
+                console.log("Local environment detected. Calling Dummy API...");
+                data = await fetchApi(transcript);
+            }
+
+            // 3. Clear Table
+            taskBody.innerHTML = '';
+
+            // 4. Generate Rows
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                
+                // Task column
+                let rowHtml = `<td class="small fw-medium">${item.task}</td>`;
+                
+                // Employee columns
+                employees.forEach(emp => {
+                    const isAssigned = item.owner.toLowerCase() === emp.toLowerCase();
+                    rowHtml += `<td class="text-center">${isAssigned ? '<span class="checkmark">✓</span>' : ''}</td>`;
+                });
+
+                row.innerHTML = rowHtml;
+                taskBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("Error processing tasks:", error);
+            alert("Failed to process tasks. Check console for details.");
+        } finally {
+            // 5. Hide Spinner Modal
+            overlay.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>
