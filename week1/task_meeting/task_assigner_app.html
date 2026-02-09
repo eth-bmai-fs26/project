@@ -93,21 +93,27 @@
     const employees = ["John", "Sarah", "Mike", "Elena", "David"];
 
     /**
-     * Dummy API function for non-Colab environments
+     * API function to call the Flask backend
      */
     async function fetchApi(text) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                // Simulating AI extraction based on the default text
-                resolve([
-                    { task: "Update the SQL server", owner: "John" },
-                    { task: "Focus on the budget for Q4", owner: "Sarah" },
-                    { task: "Call the client", owner: "Mike" },
-                    { task: "Draft the press release", owner: "Elena" },
-                    { task: "Check the security logs", owner: "David" }
-                ]);
-            }, 3000);
-        });
+        try {
+            const response = await fetch('http://localhost:5000/api/assign_tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ minutes: text })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error("Fetch API error:", error);
+            throw error;
+        }
     }
 
     /**
