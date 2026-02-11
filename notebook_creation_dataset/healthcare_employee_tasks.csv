@@ -1,0 +1,501 @@
+employee_id,role,task_description
+1,Doctor,Examine patient vitals for cardiology patients.
+1,Doctor,Examine patient vitals for oncology patients.
+1,Doctor,Examine patient vitals for ICU patients.
+1,Doctor,Examine patient vitals for outpatient clinic.
+1,Doctor,Examine patient vitals for emergency cases.
+1,Doctor,Examine symptoms for cardiology patients.
+1,Doctor,Examine symptoms for oncology patients.
+1,Doctor,Examine symptoms for ICU patients.
+1,Doctor,Examine symptoms for outpatient clinic.
+1,Doctor,Examine symptoms for emergency cases.
+1,Doctor,Examine treatment plans for cardiology patients.
+1,Doctor,Examine treatment plans for oncology patients.
+1,Doctor,Examine treatment plans for ICU patients.
+1,Doctor,Examine treatment plans for outpatient clinic.
+1,Doctor,Examine treatment plans for emergency cases.
+1,Doctor,Examine medical history for cardiology patients.
+1,Doctor,Examine medical history for oncology patients.
+1,Doctor,Examine medical history for ICU patients.
+1,Doctor,Examine medical history for outpatient clinic.
+1,Doctor,Examine medical history for emergency cases.
+1,Doctor,Examine lab results for cardiology patients.
+1,Doctor,Examine lab results for oncology patients.
+1,Doctor,Examine lab results for ICU patients.
+1,Doctor,Examine lab results for outpatient clinic.
+1,Doctor,Examine lab results for emergency cases.
+1,Doctor,Diagnose patient vitals for cardiology patients.
+1,Doctor,Diagnose patient vitals for oncology patients.
+1,Doctor,Diagnose patient vitals for ICU patients.
+1,Doctor,Diagnose patient vitals for outpatient clinic.
+1,Doctor,Diagnose patient vitals for emergency cases.
+1,Doctor,Diagnose symptoms for cardiology patients.
+1,Doctor,Diagnose symptoms for oncology patients.
+1,Doctor,Diagnose symptoms for ICU patients.
+1,Doctor,Diagnose symptoms for outpatient clinic.
+1,Doctor,Diagnose symptoms for emergency cases.
+1,Doctor,Diagnose treatment plans for cardiology patients.
+1,Doctor,Diagnose treatment plans for oncology patients.
+1,Doctor,Diagnose treatment plans for ICU patients.
+1,Doctor,Diagnose treatment plans for outpatient clinic.
+1,Doctor,Diagnose treatment plans for emergency cases.
+1,Doctor,Diagnose medical history for cardiology patients.
+1,Doctor,Diagnose medical history for oncology patients.
+1,Doctor,Diagnose medical history for ICU patients.
+1,Doctor,Diagnose medical history for outpatient clinic.
+1,Doctor,Diagnose medical history for emergency cases.
+1,Doctor,Diagnose lab results for cardiology patients.
+1,Doctor,Diagnose lab results for oncology patients.
+1,Doctor,Diagnose lab results for ICU patients.
+1,Doctor,Diagnose lab results for outpatient clinic.
+1,Doctor,Diagnose lab results for emergency cases.
+1,Doctor,Prescribe patient vitals for cardiology patients.
+1,Doctor,Prescribe patient vitals for oncology patients.
+1,Doctor,Prescribe patient vitals for ICU patients.
+1,Doctor,Prescribe patient vitals for outpatient clinic.
+1,Doctor,Prescribe patient vitals for emergency cases.
+1,Doctor,Prescribe symptoms for cardiology patients.
+1,Doctor,Prescribe symptoms for oncology patients.
+1,Doctor,Prescribe symptoms for ICU patients.
+1,Doctor,Prescribe symptoms for outpatient clinic.
+1,Doctor,Prescribe symptoms for emergency cases.
+1,Doctor,Prescribe treatment plans for cardiology patients.
+1,Doctor,Prescribe treatment plans for oncology patients.
+1,Doctor,Prescribe treatment plans for ICU patients.
+1,Doctor,Prescribe treatment plans for outpatient clinic.
+1,Doctor,Prescribe treatment plans for emergency cases.
+1,Doctor,Prescribe medical history for cardiology patients.
+1,Doctor,Prescribe medical history for oncology patients.
+1,Doctor,Prescribe medical history for ICU patients.
+1,Doctor,Prescribe medical history for outpatient clinic.
+1,Doctor,Prescribe medical history for emergency cases.
+1,Doctor,Prescribe lab results for cardiology patients.
+1,Doctor,Prescribe lab results for oncology patients.
+1,Doctor,Prescribe lab results for ICU patients.
+1,Doctor,Prescribe lab results for outpatient clinic.
+1,Doctor,Prescribe lab results for emergency cases.
+1,Doctor,Consult patient vitals for cardiology patients.
+1,Doctor,Consult patient vitals for oncology patients.
+1,Doctor,Consult patient vitals for ICU patients.
+1,Doctor,Consult patient vitals for outpatient clinic.
+1,Doctor,Consult patient vitals for emergency cases.
+1,Doctor,Consult symptoms for cardiology patients.
+1,Doctor,Consult symptoms for oncology patients.
+1,Doctor,Consult symptoms for ICU patients.
+1,Doctor,Consult symptoms for outpatient clinic.
+1,Doctor,Consult symptoms for emergency cases.
+1,Doctor,Consult treatment plans for cardiology patients.
+1,Doctor,Consult treatment plans for oncology patients.
+1,Doctor,Consult treatment plans for ICU patients.
+1,Doctor,Consult treatment plans for outpatient clinic.
+1,Doctor,Consult treatment plans for emergency cases.
+1,Doctor,Consult medical history for cardiology patients.
+1,Doctor,Consult medical history for oncology patients.
+1,Doctor,Consult medical history for ICU patients.
+1,Doctor,Consult medical history for outpatient clinic.
+1,Doctor,Consult medical history for emergency cases.
+1,Doctor,Consult lab results for cardiology patients.
+1,Doctor,Consult lab results for oncology patients.
+1,Doctor,Consult lab results for ICU patients.
+1,Doctor,Consult lab results for outpatient clinic.
+1,Doctor,Consult lab results for emergency cases.
+2,Nurse,Administer medication for ICU patients.
+2,Nurse,Administer medication for outpatient clinic.
+2,Nurse,Administer medication for surgical ward.
+2,Nurse,Administer medication for emergency cases.
+2,Nurse,Administer medication for general ward.
+2,Nurse,Administer vital signs for ICU patients.
+2,Nurse,Administer vital signs for outpatient clinic.
+2,Nurse,Administer vital signs for surgical ward.
+2,Nurse,Administer vital signs for emergency cases.
+2,Nurse,Administer vital signs for general ward.
+2,Nurse,Administer patient charts for ICU patients.
+2,Nurse,Administer patient charts for outpatient clinic.
+2,Nurse,Administer patient charts for surgical ward.
+2,Nurse,Administer patient charts for emergency cases.
+2,Nurse,Administer patient charts for general ward.
+2,Nurse,Administer treatments for ICU patients.
+2,Nurse,Administer treatments for outpatient clinic.
+2,Nurse,Administer treatments for surgical ward.
+2,Nurse,Administer treatments for emergency cases.
+2,Nurse,Administer treatments for general ward.
+2,Nurse,Administer equipment for ICU patients.
+2,Nurse,Administer equipment for outpatient clinic.
+2,Nurse,Administer equipment for surgical ward.
+2,Nurse,Administer equipment for emergency cases.
+2,Nurse,Administer equipment for general ward.
+2,Nurse,Monitor medication for ICU patients.
+2,Nurse,Monitor medication for outpatient clinic.
+2,Nurse,Monitor medication for surgical ward.
+2,Nurse,Monitor medication for emergency cases.
+2,Nurse,Monitor medication for general ward.
+2,Nurse,Monitor vital signs for ICU patients.
+2,Nurse,Monitor vital signs for outpatient clinic.
+2,Nurse,Monitor vital signs for surgical ward.
+2,Nurse,Monitor vital signs for emergency cases.
+2,Nurse,Monitor vital signs for general ward.
+2,Nurse,Monitor patient charts for ICU patients.
+2,Nurse,Monitor patient charts for outpatient clinic.
+2,Nurse,Monitor patient charts for surgical ward.
+2,Nurse,Monitor patient charts for emergency cases.
+2,Nurse,Monitor patient charts for general ward.
+2,Nurse,Monitor treatments for ICU patients.
+2,Nurse,Monitor treatments for outpatient clinic.
+2,Nurse,Monitor treatments for surgical ward.
+2,Nurse,Monitor treatments for emergency cases.
+2,Nurse,Monitor treatments for general ward.
+2,Nurse,Monitor equipment for ICU patients.
+2,Nurse,Monitor equipment for outpatient clinic.
+2,Nurse,Monitor equipment for surgical ward.
+2,Nurse,Monitor equipment for emergency cases.
+2,Nurse,Monitor equipment for general ward.
+2,Nurse,Assist medication for ICU patients.
+2,Nurse,Assist medication for outpatient clinic.
+2,Nurse,Assist medication for surgical ward.
+2,Nurse,Assist medication for emergency cases.
+2,Nurse,Assist medication for general ward.
+2,Nurse,Assist vital signs for ICU patients.
+2,Nurse,Assist vital signs for outpatient clinic.
+2,Nurse,Assist vital signs for surgical ward.
+2,Nurse,Assist vital signs for emergency cases.
+2,Nurse,Assist vital signs for general ward.
+2,Nurse,Assist patient charts for ICU patients.
+2,Nurse,Assist patient charts for outpatient clinic.
+2,Nurse,Assist patient charts for surgical ward.
+2,Nurse,Assist patient charts for emergency cases.
+2,Nurse,Assist patient charts for general ward.
+2,Nurse,Assist treatments for ICU patients.
+2,Nurse,Assist treatments for outpatient clinic.
+2,Nurse,Assist treatments for surgical ward.
+2,Nurse,Assist treatments for emergency cases.
+2,Nurse,Assist treatments for general ward.
+2,Nurse,Assist equipment for ICU patients.
+2,Nurse,Assist equipment for outpatient clinic.
+2,Nurse,Assist equipment for surgical ward.
+2,Nurse,Assist equipment for emergency cases.
+2,Nurse,Assist equipment for general ward.
+2,Nurse,Record medication for ICU patients.
+2,Nurse,Record medication for outpatient clinic.
+2,Nurse,Record medication for surgical ward.
+2,Nurse,Record medication for emergency cases.
+2,Nurse,Record medication for general ward.
+2,Nurse,Record vital signs for ICU patients.
+2,Nurse,Record vital signs for outpatient clinic.
+2,Nurse,Record vital signs for surgical ward.
+2,Nurse,Record vital signs for emergency cases.
+2,Nurse,Record vital signs for general ward.
+2,Nurse,Record patient charts for ICU patients.
+2,Nurse,Record patient charts for outpatient clinic.
+2,Nurse,Record patient charts for surgical ward.
+2,Nurse,Record patient charts for emergency cases.
+2,Nurse,Record patient charts for general ward.
+2,Nurse,Record treatments for ICU patients.
+2,Nurse,Record treatments for outpatient clinic.
+2,Nurse,Record treatments for surgical ward.
+2,Nurse,Record treatments for emergency cases.
+2,Nurse,Record treatments for general ward.
+2,Nurse,Record equipment for ICU patients.
+2,Nurse,Record equipment for outpatient clinic.
+2,Nurse,Record equipment for surgical ward.
+2,Nurse,Record equipment for emergency cases.
+2,Nurse,Record equipment for general ward.
+3,Lab Technician,Analyze blood samples for ICU patients.
+3,Lab Technician,Analyze blood samples for routine check-ups.
+3,Lab Technician,Analyze blood samples for emergency cases.
+3,Lab Technician,Analyze blood samples for surgical patients.
+3,Lab Technician,Analyze blood samples for outpatient clinic.
+3,Lab Technician,Analyze urine tests for ICU patients.
+3,Lab Technician,Analyze urine tests for routine check-ups.
+3,Lab Technician,Analyze urine tests for emergency cases.
+3,Lab Technician,Analyze urine tests for surgical patients.
+3,Lab Technician,Analyze urine tests for outpatient clinic.
+3,Lab Technician,Analyze pathology slides for ICU patients.
+3,Lab Technician,Analyze pathology slides for routine check-ups.
+3,Lab Technician,Analyze pathology slides for emergency cases.
+3,Lab Technician,Analyze pathology slides for surgical patients.
+3,Lab Technician,Analyze pathology slides for outpatient clinic.
+3,Lab Technician,Analyze microbiology cultures for ICU patients.
+3,Lab Technician,Analyze microbiology cultures for routine check-ups.
+3,Lab Technician,Analyze microbiology cultures for emergency cases.
+3,Lab Technician,Analyze microbiology cultures for surgical patients.
+3,Lab Technician,Analyze microbiology cultures for outpatient clinic.
+3,Lab Technician,Analyze diagnostic equipment for ICU patients.
+3,Lab Technician,Analyze diagnostic equipment for routine check-ups.
+3,Lab Technician,Analyze diagnostic equipment for emergency cases.
+3,Lab Technician,Analyze diagnostic equipment for surgical patients.
+3,Lab Technician,Analyze diagnostic equipment for outpatient clinic.
+3,Lab Technician,Prepare blood samples for ICU patients.
+3,Lab Technician,Prepare blood samples for routine check-ups.
+3,Lab Technician,Prepare blood samples for emergency cases.
+3,Lab Technician,Prepare blood samples for surgical patients.
+3,Lab Technician,Prepare blood samples for outpatient clinic.
+3,Lab Technician,Prepare urine tests for ICU patients.
+3,Lab Technician,Prepare urine tests for routine check-ups.
+3,Lab Technician,Prepare urine tests for emergency cases.
+3,Lab Technician,Prepare urine tests for surgical patients.
+3,Lab Technician,Prepare urine tests for outpatient clinic.
+3,Lab Technician,Prepare pathology slides for ICU patients.
+3,Lab Technician,Prepare pathology slides for routine check-ups.
+3,Lab Technician,Prepare pathology slides for emergency cases.
+3,Lab Technician,Prepare pathology slides for surgical patients.
+3,Lab Technician,Prepare pathology slides for outpatient clinic.
+3,Lab Technician,Prepare microbiology cultures for ICU patients.
+3,Lab Technician,Prepare microbiology cultures for routine check-ups.
+3,Lab Technician,Prepare microbiology cultures for emergency cases.
+3,Lab Technician,Prepare microbiology cultures for surgical patients.
+3,Lab Technician,Prepare microbiology cultures for outpatient clinic.
+3,Lab Technician,Prepare diagnostic equipment for ICU patients.
+3,Lab Technician,Prepare diagnostic equipment for routine check-ups.
+3,Lab Technician,Prepare diagnostic equipment for emergency cases.
+3,Lab Technician,Prepare diagnostic equipment for surgical patients.
+3,Lab Technician,Prepare diagnostic equipment for outpatient clinic.
+3,Lab Technician,Test blood samples for ICU patients.
+3,Lab Technician,Test blood samples for routine check-ups.
+3,Lab Technician,Test blood samples for emergency cases.
+3,Lab Technician,Test blood samples for surgical patients.
+3,Lab Technician,Test blood samples for outpatient clinic.
+3,Lab Technician,Test urine tests for ICU patients.
+3,Lab Technician,Test urine tests for routine check-ups.
+3,Lab Technician,Test urine tests for emergency cases.
+3,Lab Technician,Test urine tests for surgical patients.
+3,Lab Technician,Test urine tests for outpatient clinic.
+3,Lab Technician,Test pathology slides for ICU patients.
+3,Lab Technician,Test pathology slides for routine check-ups.
+3,Lab Technician,Test pathology slides for emergency cases.
+3,Lab Technician,Test pathology slides for surgical patients.
+3,Lab Technician,Test pathology slides for outpatient clinic.
+3,Lab Technician,Test microbiology cultures for ICU patients.
+3,Lab Technician,Test microbiology cultures for routine check-ups.
+3,Lab Technician,Test microbiology cultures for emergency cases.
+3,Lab Technician,Test microbiology cultures for surgical patients.
+3,Lab Technician,Test microbiology cultures for outpatient clinic.
+3,Lab Technician,Test diagnostic equipment for ICU patients.
+3,Lab Technician,Test diagnostic equipment for routine check-ups.
+3,Lab Technician,Test diagnostic equipment for emergency cases.
+3,Lab Technician,Test diagnostic equipment for surgical patients.
+3,Lab Technician,Test diagnostic equipment for outpatient clinic.
+3,Lab Technician,Calibrate blood samples for ICU patients.
+3,Lab Technician,Calibrate blood samples for routine check-ups.
+3,Lab Technician,Calibrate blood samples for emergency cases.
+3,Lab Technician,Calibrate blood samples for surgical patients.
+3,Lab Technician,Calibrate blood samples for outpatient clinic.
+3,Lab Technician,Calibrate urine tests for ICU patients.
+3,Lab Technician,Calibrate urine tests for routine check-ups.
+3,Lab Technician,Calibrate urine tests for emergency cases.
+3,Lab Technician,Calibrate urine tests for surgical patients.
+3,Lab Technician,Calibrate urine tests for outpatient clinic.
+3,Lab Technician,Calibrate pathology slides for ICU patients.
+3,Lab Technician,Calibrate pathology slides for routine check-ups.
+3,Lab Technician,Calibrate pathology slides for emergency cases.
+3,Lab Technician,Calibrate pathology slides for surgical patients.
+3,Lab Technician,Calibrate pathology slides for outpatient clinic.
+3,Lab Technician,Calibrate microbiology cultures for ICU patients.
+3,Lab Technician,Calibrate microbiology cultures for routine check-ups.
+3,Lab Technician,Calibrate microbiology cultures for emergency cases.
+3,Lab Technician,Calibrate microbiology cultures for surgical patients.
+3,Lab Technician,Calibrate microbiology cultures for outpatient clinic.
+3,Lab Technician,Calibrate diagnostic equipment for ICU patients.
+3,Lab Technician,Calibrate diagnostic equipment for routine check-ups.
+3,Lab Technician,Calibrate diagnostic equipment for emergency cases.
+3,Lab Technician,Calibrate diagnostic equipment for surgical patients.
+3,Lab Technician,Calibrate diagnostic equipment for outpatient clinic.
+4,Pharmacist,Prepare prescriptions for high-risk patients.
+4,Pharmacist,Prepare prescriptions for new admissions.
+4,Pharmacist,Prepare prescriptions for outpatient clinic.
+4,Pharmacist,Prepare prescriptions for ICU patients.
+4,Pharmacist,Prepare prescriptions for emergency cases.
+4,Pharmacist,Prepare medication orders for high-risk patients.
+4,Pharmacist,Prepare medication orders for new admissions.
+4,Pharmacist,Prepare medication orders for outpatient clinic.
+4,Pharmacist,Prepare medication orders for ICU patients.
+4,Pharmacist,Prepare medication orders for emergency cases.
+4,Pharmacist,Prepare patient medication charts for high-risk patients.
+4,Pharmacist,Prepare patient medication charts for new admissions.
+4,Pharmacist,Prepare patient medication charts for outpatient clinic.
+4,Pharmacist,Prepare patient medication charts for ICU patients.
+4,Pharmacist,Prepare patient medication charts for emergency cases.
+4,Pharmacist,Prepare controlled substances for high-risk patients.
+4,Pharmacist,Prepare controlled substances for new admissions.
+4,Pharmacist,Prepare controlled substances for outpatient clinic.
+4,Pharmacist,Prepare controlled substances for ICU patients.
+4,Pharmacist,Prepare controlled substances for emergency cases.
+4,Pharmacist,Prepare inventory records for high-risk patients.
+4,Pharmacist,Prepare inventory records for new admissions.
+4,Pharmacist,Prepare inventory records for outpatient clinic.
+4,Pharmacist,Prepare inventory records for ICU patients.
+4,Pharmacist,Prepare inventory records for emergency cases.
+4,Pharmacist,Dispense prescriptions for high-risk patients.
+4,Pharmacist,Dispense prescriptions for new admissions.
+4,Pharmacist,Dispense prescriptions for outpatient clinic.
+4,Pharmacist,Dispense prescriptions for ICU patients.
+4,Pharmacist,Dispense prescriptions for emergency cases.
+4,Pharmacist,Dispense medication orders for high-risk patients.
+4,Pharmacist,Dispense medication orders for new admissions.
+4,Pharmacist,Dispense medication orders for outpatient clinic.
+4,Pharmacist,Dispense medication orders for ICU patients.
+4,Pharmacist,Dispense medication orders for emergency cases.
+4,Pharmacist,Dispense patient medication charts for high-risk patients.
+4,Pharmacist,Dispense patient medication charts for new admissions.
+4,Pharmacist,Dispense patient medication charts for outpatient clinic.
+4,Pharmacist,Dispense patient medication charts for ICU patients.
+4,Pharmacist,Dispense patient medication charts for emergency cases.
+4,Pharmacist,Dispense controlled substances for high-risk patients.
+4,Pharmacist,Dispense controlled substances for new admissions.
+4,Pharmacist,Dispense controlled substances for outpatient clinic.
+4,Pharmacist,Dispense controlled substances for ICU patients.
+4,Pharmacist,Dispense controlled substances for emergency cases.
+4,Pharmacist,Dispense inventory records for high-risk patients.
+4,Pharmacist,Dispense inventory records for new admissions.
+4,Pharmacist,Dispense inventory records for outpatient clinic.
+4,Pharmacist,Dispense inventory records for ICU patients.
+4,Pharmacist,Dispense inventory records for emergency cases.
+4,Pharmacist,Verify prescriptions for high-risk patients.
+4,Pharmacist,Verify prescriptions for new admissions.
+4,Pharmacist,Verify prescriptions for outpatient clinic.
+4,Pharmacist,Verify prescriptions for ICU patients.
+4,Pharmacist,Verify prescriptions for emergency cases.
+4,Pharmacist,Verify medication orders for high-risk patients.
+4,Pharmacist,Verify medication orders for new admissions.
+4,Pharmacist,Verify medication orders for outpatient clinic.
+4,Pharmacist,Verify medication orders for ICU patients.
+4,Pharmacist,Verify medication orders for emergency cases.
+4,Pharmacist,Verify patient medication charts for high-risk patients.
+4,Pharmacist,Verify patient medication charts for new admissions.
+4,Pharmacist,Verify patient medication charts for outpatient clinic.
+4,Pharmacist,Verify patient medication charts for ICU patients.
+4,Pharmacist,Verify patient medication charts for emergency cases.
+4,Pharmacist,Verify controlled substances for high-risk patients.
+4,Pharmacist,Verify controlled substances for new admissions.
+4,Pharmacist,Verify controlled substances for outpatient clinic.
+4,Pharmacist,Verify controlled substances for ICU patients.
+4,Pharmacist,Verify controlled substances for emergency cases.
+4,Pharmacist,Verify inventory records for high-risk patients.
+4,Pharmacist,Verify inventory records for new admissions.
+4,Pharmacist,Verify inventory records for outpatient clinic.
+4,Pharmacist,Verify inventory records for ICU patients.
+4,Pharmacist,Verify inventory records for emergency cases.
+4,Pharmacist,Review prescriptions for high-risk patients.
+4,Pharmacist,Review prescriptions for new admissions.
+4,Pharmacist,Review prescriptions for outpatient clinic.
+4,Pharmacist,Review prescriptions for ICU patients.
+4,Pharmacist,Review prescriptions for emergency cases.
+4,Pharmacist,Review medication orders for high-risk patients.
+4,Pharmacist,Review medication orders for new admissions.
+4,Pharmacist,Review medication orders for outpatient clinic.
+4,Pharmacist,Review medication orders for ICU patients.
+4,Pharmacist,Review medication orders for emergency cases.
+4,Pharmacist,Review patient medication charts for high-risk patients.
+4,Pharmacist,Review patient medication charts for new admissions.
+4,Pharmacist,Review patient medication charts for outpatient clinic.
+4,Pharmacist,Review patient medication charts for ICU patients.
+4,Pharmacist,Review patient medication charts for emergency cases.
+4,Pharmacist,Review controlled substances for high-risk patients.
+4,Pharmacist,Review controlled substances for new admissions.
+4,Pharmacist,Review controlled substances for outpatient clinic.
+4,Pharmacist,Review controlled substances for ICU patients.
+4,Pharmacist,Review controlled substances for emergency cases.
+4,Pharmacist,Review inventory records for high-risk patients.
+4,Pharmacist,Review inventory records for new admissions.
+4,Pharmacist,Review inventory records for outpatient clinic.
+4,Pharmacist,Review inventory records for ICU patients.
+4,Pharmacist,Review inventory records for emergency cases.
+5,Administrator,Update patient records for new admissions.
+5,Administrator,Update patient records for outpatient clinic.
+5,Administrator,Update patient records for inpatient wards.
+5,Administrator,Update patient records for emergency cases.
+5,Administrator,Update patient records for surgical procedures.
+5,Administrator,Update appointments for new admissions.
+5,Administrator,Update appointments for outpatient clinic.
+5,Administrator,Update appointments for inpatient wards.
+5,Administrator,Update appointments for emergency cases.
+5,Administrator,Update appointments for surgical procedures.
+5,Administrator,Update billing information for new admissions.
+5,Administrator,Update billing information for outpatient clinic.
+5,Administrator,Update billing information for inpatient wards.
+5,Administrator,Update billing information for emergency cases.
+5,Administrator,Update billing information for surgical procedures.
+5,Administrator,Update staff schedules for new admissions.
+5,Administrator,Update staff schedules for outpatient clinic.
+5,Administrator,Update staff schedules for inpatient wards.
+5,Administrator,Update staff schedules for emergency cases.
+5,Administrator,Update staff schedules for surgical procedures.
+5,Administrator,Update insurance claims for new admissions.
+5,Administrator,Update insurance claims for outpatient clinic.
+5,Administrator,Update insurance claims for inpatient wards.
+5,Administrator,Update insurance claims for emergency cases.
+5,Administrator,Update insurance claims for surgical procedures.
+5,Administrator,Organize patient records for new admissions.
+5,Administrator,Organize patient records for outpatient clinic.
+5,Administrator,Organize patient records for inpatient wards.
+5,Administrator,Organize patient records for emergency cases.
+5,Administrator,Organize patient records for surgical procedures.
+5,Administrator,Organize appointments for new admissions.
+5,Administrator,Organize appointments for outpatient clinic.
+5,Administrator,Organize appointments for inpatient wards.
+5,Administrator,Organize appointments for emergency cases.
+5,Administrator,Organize appointments for surgical procedures.
+5,Administrator,Organize billing information for new admissions.
+5,Administrator,Organize billing information for outpatient clinic.
+5,Administrator,Organize billing information for inpatient wards.
+5,Administrator,Organize billing information for emergency cases.
+5,Administrator,Organize billing information for surgical procedures.
+5,Administrator,Organize staff schedules for new admissions.
+5,Administrator,Organize staff schedules for outpatient clinic.
+5,Administrator,Organize staff schedules for inpatient wards.
+5,Administrator,Organize staff schedules for emergency cases.
+5,Administrator,Organize staff schedules for surgical procedures.
+5,Administrator,Organize insurance claims for new admissions.
+5,Administrator,Organize insurance claims for outpatient clinic.
+5,Administrator,Organize insurance claims for inpatient wards.
+5,Administrator,Organize insurance claims for emergency cases.
+5,Administrator,Organize insurance claims for surgical procedures.
+5,Administrator,Schedule patient records for new admissions.
+5,Administrator,Schedule patient records for outpatient clinic.
+5,Administrator,Schedule patient records for inpatient wards.
+5,Administrator,Schedule patient records for emergency cases.
+5,Administrator,Schedule patient records for surgical procedures.
+5,Administrator,Schedule appointments for new admissions.
+5,Administrator,Schedule appointments for outpatient clinic.
+5,Administrator,Schedule appointments for inpatient wards.
+5,Administrator,Schedule appointments for emergency cases.
+5,Administrator,Schedule appointments for surgical procedures.
+5,Administrator,Schedule billing information for new admissions.
+5,Administrator,Schedule billing information for outpatient clinic.
+5,Administrator,Schedule billing information for inpatient wards.
+5,Administrator,Schedule billing information for emergency cases.
+5,Administrator,Schedule billing information for surgical procedures.
+5,Administrator,Schedule staff schedules for new admissions.
+5,Administrator,Schedule staff schedules for outpatient clinic.
+5,Administrator,Schedule staff schedules for inpatient wards.
+5,Administrator,Schedule staff schedules for emergency cases.
+5,Administrator,Schedule staff schedules for surgical procedures.
+5,Administrator,Schedule insurance claims for new admissions.
+5,Administrator,Schedule insurance claims for outpatient clinic.
+5,Administrator,Schedule insurance claims for inpatient wards.
+5,Administrator,Schedule insurance claims for emergency cases.
+5,Administrator,Schedule insurance claims for surgical procedures.
+5,Administrator,Verify patient records for new admissions.
+5,Administrator,Verify patient records for outpatient clinic.
+5,Administrator,Verify patient records for inpatient wards.
+5,Administrator,Verify patient records for emergency cases.
+5,Administrator,Verify patient records for surgical procedures.
+5,Administrator,Verify appointments for new admissions.
+5,Administrator,Verify appointments for outpatient clinic.
+5,Administrator,Verify appointments for inpatient wards.
+5,Administrator,Verify appointments for emergency cases.
+5,Administrator,Verify appointments for surgical procedures.
+5,Administrator,Verify billing information for new admissions.
+5,Administrator,Verify billing information for outpatient clinic.
+5,Administrator,Verify billing information for inpatient wards.
+5,Administrator,Verify billing information for emergency cases.
+5,Administrator,Verify billing information for surgical procedures.
+5,Administrator,Verify staff schedules for new admissions.
+5,Administrator,Verify staff schedules for outpatient clinic.
+5,Administrator,Verify staff schedules for inpatient wards.
+5,Administrator,Verify staff schedules for emergency cases.
+5,Administrator,Verify staff schedules for surgical procedures.
+5,Administrator,Verify insurance claims for new admissions.
+5,Administrator,Verify insurance claims for outpatient clinic.
+5,Administrator,Verify insurance claims for inpatient wards.
+5,Administrator,Verify insurance claims for emergency cases.
+5,Administrator,Verify insurance claims for surgical procedures.
