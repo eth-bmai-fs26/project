@@ -1,0 +1,9 @@
+Plan ID: P-2057
+Trip: Zurich -> Barcelona, 2026-03-12 to 2026-03-16
+
+Plan Steps:
+1) Search and book flights from ZRH to BCN for March 12th, returning March 16th.
+2) Reserve a hotel near Las Ramblas for 4 nights with free cancellation.
+3) Arrange a rental car pickup at BCN airport for exploring the coast.
+4) Book a return flight from Barcelona to Zurich on the evening of March 16th.
+5) Find accommodation near the beach in Sitges for one night as a day trip option.

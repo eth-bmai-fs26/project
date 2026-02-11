@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .upload-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: white;
+        }
+        
+        .upload-section h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.3em;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .file-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .file-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .file-name {
+            margin-top: 10px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .route-btn {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.2s;
+        }
+        
+        .route-btn:hover:not(:disabled) {
+            background: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(46, 204, 113, 0.4);
+        }
+        
+        .route-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .plan-preview {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            display: none;
+        }
+        
+        .results-section {
+            display: none;
+        }
+        
+        .plan-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
+            margin-bottom: 0;
+        }
+        
+        .plan-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        
+        .plan-header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+        
+        .routing-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 0 0 10px 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .routing-table th {
+            background: #34495e;
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .routing-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .routing-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .routing-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .tool-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+        
+        .tool-badge.flight {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .tool-badge.hotel {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .tool-badge.car {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .confidence {
+            font-weight: 600;
+            color: #27ae60;
+        }
+        
+        .bipartite-graph {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .bipartite-graph h3 {
+            margin: 0 0 20px 0;
+            color: #2c3e50;
+            text-align: center;
+        }
+        
+        .graph-container {
+            position: relative;
+            min-height: 300px;
+        }
+        
+        svg.routing-svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .step-node {
+            fill: #ecf0f1;
+            stroke: #34495e;
+            stroke-width: 2;
+        }
+        
+        .tool-node {
+            stroke: #2c3e50;
+            stroke-width: 2;
+        }
+        
+        .tool-node.flight { fill: #3498db; }
+        .tool-node.hotel { fill: #e74c3c; }
+        .tool-node.car { fill: #2ecc71; }
+        
+        .edge {
+            fill: none;
+            stroke-width: 2;
+            opacity: 0.7;
+        }
+        
+        .edge.flight { stroke: #3498db; }
+        .edge.hotel { stroke: #e74c3c; }
+        .edge.car { stroke: #2ecc71; }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #ecf0f1;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-msg {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c00;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📄 Travel Plan File Router</h2>
+        
+        <div class="upload-section">
+            <h3>Upload a .txt Travel Plan</h3>
+            <p style="margin-bottom: 15px; opacity: 0.9;">Select a plan file to route each step to the appropriate booking tool</p>
+            
+            <div class="file-input-wrapper">
+                <button class="file-btn">📁 Choose File</button>
+                <input type="file" id="planFile" accept=".txt" onchange="handleFileSelect(event)">
+            </div>
+            <div class="file-name" id="fileName">No file selected</div>
+            
+            <br>
+            <button class="route-btn" id="routeBtn" onclick="routePlan()" disabled>🚀 Route My Plan</button>
+        </div>
+        
+        <div class="plan-preview" id="planPreview"></div>
+        
+        <div class="error-msg" id="errorMsg"></div>
+        
+        <div class="loading" id="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Embedding and routing steps...</p>
+        </div>
+        
+        <div class="results-section" id="resultsSection">
+            <div class="plan-header">
+                <h3 id="planTitle">📋 Plan: P-XXXX</h3>
+                <p id="tripSummary">🗺️ Trip details here</p>
+            </div>
+            
+            <table class="routing-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Step</th>
+                        <th>Description</th>
+                        <th style="width: 180px;">Routed To</th>
+                        <th style="width: 80px;">Conf.</th>
+                    </tr>
+                </thead>
+                <tbody id="routingTableBody">
+                </tbody>
+            </table>
+            
+            <div class="bipartite-graph">
+                <h3>🧭 Routing Visualization</h3>
+                <div class="graph-container" id="graphContainer">
+                    <svg class="routing-svg" id="routingSvg"></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let planContent = '';
+        
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('routeBtn').disabled = false;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                planContent = e.target.result;
+                document.getElementById('planPreview').textContent = planContent;
+                document.getElementById('planPreview').style.display = 'block';
+            };
+            reader.readAsText(file);
+        }
+        
+        async function routePlan() {
+            if (!planContent) {
+                showError('Please select a file first.');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'none';
+            
+            try {
+                // Call Python callback via Colab
+                const results = await google.colab.kernel.invokeFunction(
+                    'notebook.RoutePlanFile',
+                    [planContent],
+                    {}
+                );
+                
+                const data = results.data['application/json'];
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                displayResults(data);
+                
+            } catch (error) {
+                showError('Error routing plan: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function showError(msg) {
+            const errorEl = document.getElementById('errorMsg');
+            errorEl.textContent = '❌ ' + msg;
+            errorEl.style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function displayResults(data) {
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('planTitle').textContent = '📋 Plan: ' + data.plan_id;
+            document.getElementById('tripSummary').textContent = '🗺️ ' + data.trip_summary;
+            
+            // Populate table
+            const tbody = document.getElementById('routingTableBody');
+            tbody.innerHTML = '';
+            
+            data.results.forEach(r => {
+                const toolClass = r.tool.includes('FLIGHT') ? 'flight' : 
+                                  r.tool.includes('HOTEL') ? 'hotel' : 'car';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${r.step_index}</strong></td>
+                    <td>${escapeHtml(r.step_text)}</td>
+                    <td><span class="tool-badge ${toolClass}">${r.emoji} ${r.tool.replace('_BOOKER', '')}</span></td>
+                    <td class="confidence">${r.confidence.toFixed(1)}%</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Draw bipartite graph
+            drawBipartiteGraph(data.results);
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function drawBipartiteGraph(results) {
+            const svg = document.getElementById('routingSvg');
+            const container = document.getElementById('graphContainer');
+            
+            const width = container.clientWidth;
+            const height = Math.max(300, results.length * 50 + 60);
+            
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            svg.innerHTML = '';
+            
+            // Tool positions (right side)
+            const tools = [
+                { name: 'FLIGHT_BOOKER', emoji: '✈️', color: '#3498db', class: 'flight' },
+                { name: 'HOTEL_BOOKER', emoji: '🏨', color: '#e74c3c', class: 'hotel' },
+                { name: 'CAR_RENTAL_BOOKER', emoji: '🚗', color: '#2ecc71', class: 'car' }
+            ];
+            
+            const toolY = {};
+            const toolX = width - 100;
+            tools.forEach((tool, i) => {
+                const y = 50 + i * (height - 100) / 2;
+                toolY[tool.name] = y;
+                
+                // Tool node
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', toolX);
+                rect.setAttribute('y', y - 20);
+                rect.setAttribute('width', 80);
+                rect.setAttribute('height', 40);
+                rect.setAttribute('rx', 8);
+                rect.setAttribute('class', `tool-node ${tool.class}`);
+                svg.appendChild(rect);
+                
+                // Tool label
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', toolX + 40);
+                text.setAttribute('y', y + 5);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', 'white');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('font-size', '14');
+                text.textContent = tool.emoji;
+                svg.appendChild(text);
+            });
+            
+            // Step nodes (left side) and edges
+            const stepX = 20;
+            const stepWidth = width * 0.45;
+            
+            results.forEach((r, i) => {
+                const y = 40 + i * ((height - 60) / results.length);
+                const toolClass = r.tool.includes('FLIGHT') ? 'flight' : 
+                                  r.tool.includes('HOTEL') ? 'hotel' : 'car';
+                const toolColor = tools.find(t => t.name === r.tool).color;
+                
+                // Edge (bezier curve)
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const startX = stepX + stepWidth;
+                const startY = y;
+                const endX = toolX;
+                const endY = toolY[r.tool];
+                const ctrlX = (startX + endX) / 2;
+                
+                path.setAttribute('d', `M ${startX} ${startY} C ${ctrlX} ${startY}, ${ctrlX} ${endY}, ${endX} ${endY}`);
+                path.setAttribute('class', `edge ${toolClass}`);
+                svg.appendChild(path);
+                
+                // Step node
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', stepX);
+                rect.setAttribute('y', y - 15);
+                rect.setAttribute('width', stepWidth);
+                rect.setAttribute('height', 30);
+                rect.setAttribute('rx', 6);
+                rect.setAttribute('class', 'step-node');
+                svg.appendChild(rect);
+                
+                // Step text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', stepX + 8);
+                text.setAttribute('y', y + 5);
+                text.setAttribute('fill', '#2c3e50');
+                text.setAttribute('font-size', '12');
+                const truncated = r.step_text.length > 50 ? r.step_text.slice(0, 47) + '...' : r.step_text;
+                text.textContent = `${r.step_index}. ${truncated}`;
+                svg.appendChild(text);
+                
+                // Confidence label on edge
+                const confText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                confText.setAttribute('x', ctrlX);
+                confText.setAttribute('y', (startY + endY) / 2);
+                confText.setAttribute('text-anchor', 'middle');
+                confText.setAttribute('fill', toolColor);
+                confText.setAttribute('font-size', '11');
+                confText.setAttribute('font-weight', 'bold');
+                confText.textContent = `${r.confidence.toFixed(0)}%`;
+                svg.appendChild(confText);
+            });
+        }
+    </script>
+</body>
+</html>
