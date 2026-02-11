@@ -21,56 +21,41 @@
             gap: 10px;
         }
         
-        .upload-section {
+        .input-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 12px;
             padding: 30px;
             margin-bottom: 20px;
-            text-align: center;
             color: white;
         }
         
-        .upload-section h3 {
+        .input-section h3 {
             margin: 0 0 15px 0;
             font-size: 1.3em;
+            text-align: center;
         }
         
-        .file-input-wrapper {
-            position: relative;
-            display: inline-block;
-        }
-        
-        .file-input-wrapper input[type="file"] {
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
+        .plan-textarea {
             width: 100%;
-            height: 100%;
-        }
-        
-        .file-btn {
-            background: white;
-            color: #667eea;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .file-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        }
-        
-        .file-name {
-            margin-top: 10px;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.95);
+            color: #2c3e50;
+            font-family: 'Consolas', 'Monaco', monospace;
             font-size: 0.9em;
-            opacity: 0.9;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .plan-textarea:focus {
+            border-color: rgba(255,255,255,0.8);
+        }
+        
+        .plan-textarea::placeholder {
+            color: #95a5a6;
         }
         
         .route-btn {
@@ -97,19 +82,7 @@
             cursor: not-allowed;
         }
         
-        .plan-preview {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 0.85em;
-            max-height: 200px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            display: none;
-        }
+
         
         .results-section {
             display: none;
@@ -277,23 +250,24 @@
 </head>
 <body>
     <div class="container">
-        <h2>📄 Travel Plan File Router</h2>
+        <h2>📄 Travel Plan Router</h2>
         
-        <div class="upload-section">
-            <h3>Upload a .txt Travel Plan</h3>
-            <p style="margin-bottom: 15px; opacity: 0.9;">Select a plan file to route each step to the appropriate booking tool</p>
+        <div class="input-section">
+            <h3>Paste Your Travel Plan</h3>
+            <p style="margin-bottom: 15px; opacity: 0.9; text-align: center;">Enter a travel plan below to route each step to the appropriate booking tool</p>
             
-            <div class="file-input-wrapper">
-                <button class="file-btn">📁 Choose File</button>
-                <input type="file" id="planFile" accept=".txt" onchange="handleFileSelect(event)">
+            <textarea class="plan-textarea" id="planText" placeholder="Plan ID: P-2057
+Trip: Zurich -> Barcelona, 2026-03-12 to 2026-03-16
+
+Plan Steps:
+1) Search and book flights from ZRH to BCN for March 12th, returning March 16th.
+2) Reserve a hotel near Las Ramblas for 4 nights with free cancellation.
+3) Arrange a rental car pickup at BCN airport for exploring the coast."></textarea>
+            
+            <div style="text-align: center;">
+                <button class="route-btn" id="routeBtn" onclick="routePlan()">🚀 Route My Plan</button>
             </div>
-            <div class="file-name" id="fileName">No file selected</div>
-            
-            <br>
-            <button class="route-btn" id="routeBtn" onclick="routePlan()" disabled>🚀 Route My Plan</button>
         </div>
-        
-        <div class="plan-preview" id="planPreview"></div>
         
         <div class="error-msg" id="errorMsg"></div>
         
@@ -331,27 +305,10 @@
     </div>
 
     <script>
-        let planContent = '';
-        
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('routeBtn').disabled = false;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                planContent = e.target.result;
-                document.getElementById('planPreview').textContent = planContent;
-                document.getElementById('planPreview').style.display = 'block';
-            };
-            reader.readAsText(file);
-        }
-        
         async function routePlan() {
+            const planContent = document.getElementById('planText').value.trim();
             if (!planContent) {
-                showError('Please select a file first.');
+                showError('Please paste a travel plan first.');
                 return;
             }
             
@@ -510,16 +467,7 @@
                 text.textContent = `${r.step_index}. ${truncated}`;
                 svg.appendChild(text);
                 
-                // Confidence label on edge
-                const confText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                confText.setAttribute('x', ctrlX);
-                confText.setAttribute('y', (startY + endY) / 2);
-                confText.setAttribute('text-anchor', 'middle');
-                confText.setAttribute('fill', toolColor);
-                confText.setAttribute('font-size', '11');
-                confText.setAttribute('font-weight', 'bold');
-                confText.textContent = `${r.confidence.toFixed(0)}%`;
-                svg.appendChild(confText);
+
             });
         }
     </script>
