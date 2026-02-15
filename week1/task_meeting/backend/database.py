@@ -11,7 +11,7 @@ db = SQLAlchemy()
 class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
-    specialization = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(120), nullable=False)
 
     def __repr__(self):
         return f'<Employee {self.name}>'
@@ -24,11 +24,11 @@ def init_db(app):
         # Seed data if empty
         if not Employee.query.first():
             employees = [
-                Employee(name="John", specialization="Database Admin"),
-                Employee(name="Sarah", specialization="Finance Manager"),
-                Employee(name="Mike", specialization="Sales Representative"),
-                Employee(name="Elena", specialization="Marketing Specialist"),
-                Employee(name="David", specialization="Security Analyst")
+                Employee(id=0, name="Employee 0", role="Doctor"),
+                Employee(id=1, name="Employee 1", role="Nurse"),
+                Employee(id=2, name="Employee 2", role="Lab Technician"),
+                Employee(id=3, name="Employee 3", role="Pharmacist"),
+                Employee(id=4, name="Employee 4", role="Administrator")
             ]
             db.session.bulk_save_objects(employees)
             db.session.commit()

@@ -52,35 +52,47 @@
 
 <div id="loadingOverlay">
     <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-    <p class="mt-3 fw-bold text-secondary">Analyzing minutes and assigning tasks...</p>
+    <p class="mt-3 fw-bold text-secondary" id="loadingText">Processing...</p>
 </div>
 
 <div class="container">
-    <div class="card shadow-sm p-4 mx-auto" style="max-width: 800px; border-radius: 15px;">
+    <div class="card shadow-sm p-4 mx-auto" style="max-width: 900px; border-radius: 15px;">
         <h5 class="text-center text-secondary border-bottom pb-2">BMAI FS26 - Project 1 - Meeting Minutes Processor</h5>
         
+        <div class="mb-3">
+            <label for="meetingSelect" class="form-label fw-bold">Select Meeting ID (0-99):</label>
+            <div class="input-group">
+                <select id="meetingSelect" class="form-select" onchange="loadMeeting()">
+                    <option value="" selected disabled>Choose a meeting...</option>
+                    <!-- Options populated by JS -->
+                </select>
+                <button class="btn btn-outline-secondary" type="button" onclick="loadMeeting()">Load</button>
+            </div>
+        </div>
+
         <div class="mt-3">
-            <label class="form-label small fw-bold">Paste Meeting Transcript</label>
-            <textarea id="minutes" class="form-control" rows="4">Manager: John, please update the SQL server today. Sarah, focus on the budget for Q4. Mike, please call the client. Elena, draft the press release. David, check the security logs.</textarea>
+            <label class="form-label small fw-bold">Meeting Transcript</label>
+            <textarea id="minutes" class="form-control" rows="6" readonly placeholder="Select a meeting to view transcript..."></textarea>
         </div>
         
-        <button onclick="runAI()" class="btn btn-dark w-100 mt-3">Extract & Assign Tasks</button>
+        <button onclick="runAssignment()" class="btn btn-dark w-100 mt-3" id="assignBtn" disabled>Extract & Assign Tasks</button>
 
         <div class="mt-4 table-responsive table-container">
             <table class="table table-hover align-middle mb-0" id="taskTable">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 40%;">Task Description</th>
-                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=john" class="avatar-img"><br>John</th>
-                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=sarah" class="avatar-img"><br>Sarah</th>
-                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=mike" class="avatar-img"><br>Mike</th>
-                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=elena" class="avatar-img"><br>Elena</th>
-                        <th class="employee-header"><img src="https://i.pravatar.cc/150?u=david" class="avatar-img"><br>David</th>
+                        <th style="width: 30%;">Task Description</th>
+                        <!-- Employee Columns: IDs 0-4 -->
+                        <th class="employee-header" title="ID: 0"><img src="https://ui-avatars.com/api/?name=Dr&background=random" class="avatar-img"><br>Doctor<br><small>(ID: 0)</small></th>
+                        <th class="employee-header" title="ID: 1"><img src="https://ui-avatars.com/api/?name=Nu&background=random" class="avatar-img"><br>Nurse<br><small>(ID: 1)</small></th>
+                        <th class="employee-header" title="ID: 2"><img src="https://ui-avatars.com/api/?name=LT&background=random" class="avatar-img"><br>Lab Tech<br><small>(ID: 2)</small></th>
+                        <th class="employee-header" title="ID: 3"><img src="https://ui-avatars.com/api/?name=Ph&background=random" class="avatar-img"><br>Pharmacist<br><small>(ID: 3)</small></th>
+                        <th class="employee-header" title="ID: 4"><img src="https://ui-avatars.com/api/?name=Ad&background=random" class="avatar-img"><br>Admin<br><small>(ID: 4)</small></th>
                     </tr>
                 </thead>
                 <tbody id="taskBody">
                     <tr>
-                        <td colspan="6" class="text-center text-muted small py-4">No tasks assigned yet. Click the button above.</td>
+                        <td colspan="6" class="text-center text-muted small py-4">Select a meeting and click 'Extract & Assign Tasks' to see results.</td>
                     </tr>
                 </tbody>
             </table>
@@ -89,70 +101,89 @@
 </div>
 
 <script>
-    // List of employees corresponding to the table columns (indices 1 to 5)
-    const employees = ["John", "Sarah", "Mike", "Elena", "David"];
+    // Employee IDs corresponding to columns (0 to 4)
+    const employeeIds = [0, 1, 2, 3, 4];
+    let currentMeetingId = null;
 
-    /**
-     * API function to call the Flask backend
-     */
-    async function fetchApi(text) {
+    // Populate Meeting Select on Load
+    document.addEventListener('DOMContentLoaded', async () => {
+        const select = document.getElementById('meetingSelect');
+        // Generate options 0-99
+        for (let i = 0; i < 100; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.text = `Meeting ${i}`;
+            select.appendChild(opt);
+        }
+    });
+
+    async function loadMeeting() {
+        const select = document.getElementById('meetingSelect');
+        const meetingId = select.value;
+        if (!meetingId) return;
+
+        currentMeetingId = meetingId;
+        const overlay = document.getElementById('loadingOverlay');
+        const minutesArea = document.getElementById('minutes');
+        const assignBtn = document.getElementById('assignBtn');
+        const taskBody = document.getElementById('taskBody');
+
+        overlay.style.display = 'flex';
+        document.getElementById('loadingText').innerText = "Loading transcript...";
+
         try {
-            const response = await fetch('http://localhost:5000/api/assign_tasks', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ minutes: text })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            const response = await fetch(`http://localhost:5000/api/meetings/${meetingId}`);
+            if (!response.ok) throw new Error('Failed to load meeting');
+            const data = await response.json();
+            
+            minutesArea.value = data.transcript;
+            assignBtn.disabled = false;
+            taskBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted small py-4">Transcript loaded. Click Assign Tasks.</td></tr>';
         } catch (error) {
-            console.error("Fetch API error:", error);
-            throw error;
+            console.error(error);
+            alert("Error loading meeting: " + error.message);
+        } finally {
+            overlay.style.display = 'none';
         }
     }
 
-    /**
-     * Main Logic
-     */
-    async function runAI() {
+    async function runAssignment() {
+        if (currentMeetingId === null) return;
+
         const overlay = document.getElementById('loadingOverlay');
         const taskBody = document.getElementById('taskBody');
-        const transcript = document.getElementById('minutes').value;
-
-        // 1. Show Spinner Modal
+        
         overlay.style.display = 'flex';
+        document.getElementById('loadingText').innerText = "Assigning tasks...";
 
         try {
-            let data;
-            
-            // 2. Detect Environment
-            if (typeof google !== 'undefined' && google.colab) {
-                console.log("Colab detected. Calling kernel...");
-                const result = await google.colab.kernel.invokeFunction('notebook.ProcessMinutes', [transcript], {});
-                data = result.data['application/json'];
-            } else {
-                console.log("Local environment detected. Calling Dummy API...");
-                data = await fetchApi(transcript);
-            }
+            const response = await fetch('http://localhost:5000/api/assign_tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ meeting_id: currentMeetingId })
+            });
 
-            // 3. Clear Table
+            if (!response.ok) throw new Error('Failed to assign tasks');
+            const assignments = await response.json();
+
+            // Clear Table
             taskBody.innerHTML = '';
 
-            // 4. Generate Rows
-            data.forEach(item => {
+            if (assignments.length === 0) {
+                taskBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted small py-4">No tasks found for this meeting.</td></tr>';
+                return;
+            }
+
+            // Generate Rows
+            assignments.forEach(item => {
                 const row = document.createElement('tr');
                 
                 // Task column
                 let rowHtml = `<td class="small fw-medium">${item.task}</td>`;
                 
-                // Employee columns
-                employees.forEach(emp => {
-                    const isAssigned = item.owner.toLowerCase() === emp.toLowerCase();
+                // Employee columns (check ID match)
+                employeeIds.forEach(id => {
+                    const isAssigned = item.owner_id === id;
                     rowHtml += `<td class="text-center">${isAssigned ? '<span class="checkmark">✓</span>' : ''}</td>`;
                 });
 
@@ -161,10 +192,9 @@
             });
 
         } catch (error) {
-            console.error("Error processing tasks:", error);
-            alert("Failed to process tasks. Check console for details.");
+            console.error("Error assigning tasks:", error);
+            alert("Failed to assign tasks. Check console.");
         } finally {
-            // 5. Hide Spinner Modal
             overlay.style.display = 'none';
         }
     }

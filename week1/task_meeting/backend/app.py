@@ -1,9 +1,9 @@
 import os
-import joblib
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from database import db, init_db, Employee
 from dotenv import load_dotenv
+import dataset  # Assuming dataset.py is in the same directory
 
 # Load environment variables
 load_dotenv()
@@ -18,66 +18,70 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize DB
 init_db(app)
 
-# Load Model
-MODEL_PATH = 'backend/models/task_classifier.pkl'
-try:
-    model = joblib.load(MODEL_PATH)
-    print("Model loaded successfully.")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    model = None
+@app.route('/api/meetings', methods=['GET'])
+def get_meetings():
+    """Returns a list of available meeting IDs."""
+    # Assuming meetings 0-99 are available based on dataset
+    # We can just return a range or check the dataset
+    # For now, let's return a list of IDs present in the dataset
+    # dataset.py should have a function for this ideally, or we can iterate
+    # Since dataset.py load_transcripts returns a dict, we can get keys
+    try:
+        meeting_ids = dataset.get_all_meeting_ids() # We need to implement this in dataset.py or just use keys
+        # If dataset.py doesn't have get_all_meeting_ids, we can implement it or just do:
+        # transcripts = dataset.load_transcripts()
+        # meeting_ids = sorted(list(transcripts.keys()))
+        return jsonify(meeting_ids)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-def extract_tasks_dummy(text):
-    """
-    Dummy LLM call. 
-    If text matches the demo input, return the specific tasks.
-    Otherwise, split by sentence.
-    """
-    default_text_snippet = "John, please update the SQL server today"
-    
-    if default_text_snippet in text:
-        return [
-            "Update the SQL server",
-            "Focus on the budget for Q4",
-            "Call the client",
-            "Draft the press release",
-            "Check the security logs"
-        ]
-    
-    # Simple fallback: split by periods and filter empty strings
-    tasks = [s.strip() for s in text.split('.') if s.strip()]
-    return tasks
+@app.route('/api/meetings/<int:meeting_id>', methods=['GET'])
+def get_meeting(meeting_id):
+    """Returns the transcript for a given meeting ID."""
+    transcript = dataset.get_meeting_transcript(meeting_id)
+    if not transcript:
+        return jsonify({"error": "Meeting not found"}), 404
+    return jsonify({"meeting_id": meeting_id, "transcript": transcript})
 
 @app.route('/api/assign_tasks', methods=['POST'])
 def assign_tasks():
+    """
+    Returns tasks for a given meeting ID from the dataset.
+    Expects JSON: {"meeting_id": 123}
+    """
     data = request.json
-    minutes_text = data.get('minutes', '')
+    meeting_id = data.get('meeting_id')
 
-    if not minutes_text:
-        return jsonify({"error": "No minutes provided"}), 400
+    if meeting_id is None:
+        return jsonify({"error": "No meeting_id provided"}), 400
 
-    # 1. Extract Tasks (Dummy LLM)
-    extracted_tasks_text = extract_tasks_dummy(minutes_text)
+    try:
+        meeting_id = int(meeting_id)
+    except ValueError:
+        return jsonify({"error": "Invalid meeting_id"}), 400
 
-    # 2. Classify and Assign
-    assignments = []
+    # Get tasks from dataset
+    tasks_data = dataset.get_meeting_tasks(meeting_id)
     
-    if not model:
-        return jsonify({"error": "Model not loaded"}), 500
+    # Format for frontend
+    assignments = []
+    for task in tasks_data:
+        # Map employee_id to name if needed, or just return ID
+        # User said "employees are identified by their id (from 0 to 4)"
+        # But frontend might want names for display or we can send both
+        # We can query DB for name/role if we want to be fancy
+        
+        emp_id = task['employee_id']
+        emp = Employee.query.get(emp_id) # Should match seeded IDs 0-4
+        owner_name = emp.name if emp else f"Employee {emp_id}"
+        role = emp.role if emp else "Unknown"
 
-    for task_desc in extracted_tasks_text:
-        # Predict specialization
-        predicted_specialization = model.predict([task_desc])[0]
-        
-        # Find employee
-        employee = Employee.query.filter_by(specialization=predicted_specialization).first()
-        
-        owner_name = employee.name if employee else "Unassigned"
-        
         assignments.append({
-            "task": task_desc,
-            "owner": owner_name,
-            "specialization": predicted_specialization # Optional debug info
+            "task": task['description'],
+            "owner_id": emp_id,
+            "owner_name": owner_name,
+            "role": role,
+            "embedding": task['embedding']
         })
 
     return jsonify(assignments)
