@@ -7,7 +7,18 @@ from flask_cors import CORS
 from sentence_transformers import SentenceTransformer
 from openai import OpenAI
 import os
-from dotenv import load_dotenv  
+from dotenv import load_dotenv
+import pandas as pd
+
+# Get the directory where app.py actually lives
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Point specifically to the .env file in the same folder
+dotenv_path = os.path.join(BASE_DIR, '.env')
+
+# Load it using the specific path
+load_dotenv(dotenv_path=dotenv_path)
+
+api_key = os.getenv("OPENAI_API_KEY")
 
 # --- 1. SETUP & PATHS ---
 app = Flask(__name__)
@@ -17,6 +28,19 @@ CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, 'models')
 MODEL_PATH = os.path.join(MODEL_DIR, 'task_classifier.pkl')
+
+
+# Load the meeting dataset at startup
+CSV_PATH = os.path.join(os.path.dirname(__file__), "../data/final_transcripts_meetings.csv")
+try:
+    df_meetings = pd.read_csv(CSV_PATH)
+    # Mapping of ID -> Transcript for quick lookup
+    MEETING_LOOKUP = dict(zip(df_meetings['meeting_id'].astype(str), df_meetings['meeting_transcript']))
+    # List of IDs for the dropdown
+    MEETING_IDS = df_meetings['meeting_id'].astype(str).tolist()
+except Exception as e:
+    print(f"⚠️ CSV Load Error: {e}")
+    MEETING_LOOKUP, MEETING_IDS = {}, []
 
 # --- 2. AUTO-TRAIN CHECK ---
 # Check if the model exists. If not, train it immediately.
@@ -61,6 +85,18 @@ client = OpenAI(
 )
 
 # --- 4. API ROUTES ---
+
+# --- Get list of IDs ---
+@app.route('/api/meeting_ids', methods=['GET'])
+def get_ids():
+    return jsonify(MEETING_IDS)
+
+# ---  Get specific transcript ---
+@app.route('/api/meeting/<meeting_id>', methods=['GET'])
+def get_meeting(meeting_id):
+    transcript = MEETING_LOOKUP.get(str(meeting_id), "Meeting not found.")
+    return jsonify({"transcript": transcript})
+
 @app.route('/api/assign_tasks', methods=['POST'])
 def assign_tasks():
     data = request.json
@@ -108,9 +144,6 @@ def assign_tasks():
         import json
         extracted_tasks = json.loads(content)
         
-    except Exception as e:
-        print(f"LLM Error: {e}")
-        return jsonify([])
     except Exception as e:
         print(f"LLM Error: {e}")
         return jsonify([])

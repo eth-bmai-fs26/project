@@ -20,7 +20,7 @@
   <body>
     <div id="loadingOverlay">
       <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem"></div>
-      <p class="mt-3 fw-bold text-secondary">AI is thinking...</p>
+      <p class="mt-3 fw-bold text-secondary">Our model is predicting...</p>
     </div>
 
     <div class="container">
@@ -28,14 +28,19 @@
         <h5 class="text-center text-secondary border-bottom pb-3">
           BMAI FS26 - Project 1 - Meeting Minutes Processor
         </h5>
-
+        <div class="mb-3">
+          <label class="form-label fw-bold">Select a Preset Meeting:</label>
+          <select id="meetingDropdown" class="form-select" onchange="loadPresetMeeting()">
+            <option value="">-- Choose a Meeting ID --</option>
+          </select>
+        </div>
         <div class="mt-3">
           <label class="form-label fw-bold">Paste Meeting Transcript:</label>
           <textarea
             id="transcriptInput"
             class="form-control"
             rows="6"
-            placeholder="Paste text here... e.g. 'Sarah, please optimize the database queries.'"
+            placeholder="Analyze a preset meeting or input your own transcript to start the AI task assignment."
           ></textarea>
         </div>
 
@@ -51,19 +56,19 @@
           
                 <th class="employee-header">
                   <img src="https://ui-avatars.com/api/?name=B&background=random" class="avatar-img"/>
-                  <div class="mt-1">Backend</div>
+                  <div class="mt-1">Backend Developer</div>
                   <span class="badge bg-secondary rounded-pill">ID: 0</span>
                 </th>
           
                 <th class="employee-header">
                   <img src="https://ui-avatars.com/api/?name=Cs&background=random" class="avatar-img"/>
-                  <div class="mt-1">Support</div>
+                  <div class="mt-1">Customer Support</div>
                   <span class="badge bg-secondary rounded-pill">ID: 1</span>
                 </th>
           
                 <th class="employee-header">
                   <img src="https://ui-avatars.com/api/?name=Ds&background=random" class="avatar-img"/>
-                  <div class="mt-1">Data Sci</div>
+                  <div class="mt-1">Data Scientist</div>
                   <span class="badge bg-secondary rounded-pill">ID: 2</span>
                 </th>
           
@@ -89,65 +94,95 @@
     </div>
 
     <script>
-      // --- THE UNIVERSAL BRIDGE ---
-      async function getAIResponse(transcriptText) {
-        // SCENARIO 1: GOOGLE COLAB
-        if (window.google && google.colab) {
-            console.log("Environment: Colab");
-            const result = await google.colab.kernel.invokeFunction(
-                'notebook.ProcessMinutes', // Python Function Name
-                [transcriptText], 
-                {}
-            );
-            return result.data['application/json'];
-        } 
-        // SCENARIO 2: LOCAL FLASK SERVER
-        else {
-            console.log("Environment: Localhost");
-            const response = await fetch("http://localhost:5001/api/assign_tasks", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ transcript: transcriptText }),
+      // --- INITIALIZATION ---
+      window.addEventListener('DOMContentLoaded', async () => {
+        const dropdown = document.getElementById("meetingDropdown");
+
+        // Reset dropdown when user starts typing
+        document.getElementById('transcriptInput').addEventListener('input', function() {
+          if (dropdown.value !== "") {
+            dropdown.value = ""; 
+            dropdown.style.borderColor = "#0d6efd"; 
+            setTimeout(() => dropdown.style.borderColor = "#dee2e6", 500);
+          }
+        });
+
+        // If NOT in Colab, fetch IDs from Flask (for the standalone browser app)
+        if (!(window.google && google.colab)) {
+          try {
+            const response = await fetch("http://localhost:5001/api/meeting_ids");
+            const ids = await response.json();
+            ids.forEach(id => {
+              let opt = document.createElement('option');
+              opt.value = id;
+              opt.innerHTML = `Meeting ID: ${id}`;
+              dropdown.appendChild(opt);
             });
-            if (!response.ok) throw new Error("Backend Error");
-            return await response.json();
+          } catch (e) { console.error("Local API load failed", e); }
+        }
+      });
+
+      // --- PRESET LOADING LOGIC ---
+      async function loadPresetMeeting() {
+        const mid = document.getElementById("meetingDropdown").value;
+        if (!mid) return;
+
+        if (window.google && google.colab) {
+          // Use Python Bridge for transcript lookup in Colab
+          const result = await google.colab.kernel.invokeFunction('notebook.GetMeetingTranscript', [mid], {});
+          document.getElementById("transcriptInput").value = result.data['application/json'].transcript;
+        } else {
+          // Use API for transcript lookup in Flask
+          const response = await fetch(`http://localhost:5001/api/meeting/${mid}`);
+          const data = await response.json();
+          document.getElementById("transcriptInput").value = data.transcript;
         }
       }
 
-      // --- UI LOGIC ---
+      // --- PROCESSING LOGIC ---
+      async function getAIResponse(transcriptText) {
+        if (window.google && google.colab) {
+          const result = await google.colab.kernel.invokeFunction('notebook.ProcessMinutes', [transcriptText], {});
+          return result.data['application/json'];
+        } else {
+          const response = await fetch("http://localhost:5001/api/assign_tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ transcript: transcriptText }),
+          });
+          return await response.json();
+        }
+      }
+    
+      // --- UI RENDERING ---
       async function runAssignment() {
         const text = document.getElementById("transcriptInput").value.trim();
         if (!text) { alert("Please enter text first!"); return; }
-
+    
         const overlay = document.getElementById("loadingOverlay");
         const taskBody = document.getElementById("taskBody");
         overlay.style.display = "flex";
-
+    
         try {
-          // CALL THE BRIDGE
           const assignments = await getAIResponse(text);
-
-          // RENDER RESULTS
           taskBody.innerHTML = "";
+          
           if (!assignments || assignments.length === 0) {
-             taskBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No tasks found.</td></tr>';
-             return;
+            taskBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No tasks found.</td></tr>';
+            return;
           }
-
+    
           assignments.forEach((item) => {
             const row = document.createElement("tr");
             let html = `<td class="fw-medium px-2">${item.task}</td>`;
-            // Checkboxes for IDs 0-4
             for (let id = 0; id <= 4; id++) {
-                const isMatch = item.owner_id === id;
-                html += `<td class="text-center">${isMatch ? '<span class="checkmark">✓</span>' : ''}</td>`;
+              const isMatch = item.owner_id === id;
+              html += `<td class="text-center">${isMatch ? '<span class="checkmark">✓</span>' : ''}</td>`;
             }
             row.innerHTML = html;
             taskBody.appendChild(row);
           });
-
         } catch (error) {
-          console.error(error);
           alert("Error: " + error.message);
         } finally {
           overlay.style.display = "none";
