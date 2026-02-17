@@ -2,19 +2,22 @@
 
 This project is a web-based application designed to automatically extract and assign tasks from meeting minutes. It demonstrates a full-stack integration of a simple HTML frontend with a Python Flask backend, utilizing a machine learning model for task classification and a SQLite database for employee management.
 
-## Project Structure
+It demonstrates a **Hybrid AI approach**:
+1.  **LLM (GPT-4o-mini)**: Extracts unstructured text into structured task lists.
+2.  **Classic ML (SVM + BERT Embeddings)**: Classifies those tasks to specific employees based on historical data.
 
-```
-task_meeting/
+## 📂 Project Structure
+
+```text
+week1/task_meeting/
 ├── backend/
-│   ├── app.py                 # Main Flask application entry point
-│   ├── database.py            # Database setup and employee seeding script
-│   ├── train_model.py         # Script to train and save the task classification model
-│   ├── .env                   # Environment variables (Database URL, etc.)
+│   ├── app.py                 # Main Flask application (API + Auto-Train Logic)
+│   ├── train_model.py         # Script to train the SVM classifier
 │   └── models/
-│       └── task_classifier.pkl # Saved Scikit-learn model (generated)
-├── task_assigner_app.html     # Frontend interface
-├── project_task_meeting.ipynb # Jupyter Notebook for exploration
+│       └── task_classifier.pkl # Saved SVM model (auto-generated)
+├── data/
+│   └── employee_tasks_hybrid.pkl  # Dataset with embeddings for training
+├── task_assigner_app.html     # Frontend interface (Bootstrap + JS)
 └── README.md                  # Project documentation
 ```
 
@@ -150,3 +153,5 @@ xdg-open task_assigner_app.html  # Linux
 *   **Port 5000 in use**: If Flask fails to start, check if another process is using port 5000 (`lsof -i :5000`) and kill it.
 *   **CORS Errors**: If the frontend doesn't work, ensure `flask-cors` is installed and `CORS(app)` is active in `app.py`.
 *   **Model not found**: Ensure you ran `python backend/train_model.py` before starting the app.
+*   **ModuleNotFoundError**: No module named 'sentence_transformers': Run pip install sentence-transformers.
+*   **Model not found / Training Error**: Ensure employee_tasks_hybrid.pkl exists in the data/ folder.
