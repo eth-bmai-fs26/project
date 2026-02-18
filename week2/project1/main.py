@@ -2,13 +2,13 @@
 from torch.utils.data import DataLoader
 
 # Dataset: loads (image, binary_mask) pairs from data/
-from week2.dataset import SegmentationDataset
+from week2.project1.dataset import SegmentationDataset
 
 # U-Net model and its training function
-from week2.unet import UNet, train_unet
+from week2.project1.unet import UNet, train_unet
 
 # Feedforward network for counting broken objects
-from week2.counter import BrokenCounter, train_counter
+from week2.project1.counter import BrokenCounter, train_counter
 
 
 # --------------------------------------------------

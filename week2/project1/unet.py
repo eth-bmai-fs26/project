@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from week2.utils import dice_loss
+from week2.project1.utils import dice_loss
 
 
 class ConvBlock(nn.Module):
