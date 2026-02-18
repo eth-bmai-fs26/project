@@ -1,63 +1,55 @@
+import pandas as pd
+import numpy as np
 import joblib
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import make_pipeline
+from sklearn.svm import LinearSVC  # Using Linear SVM as requested
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+# Paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Going up one level to find 'data', then down into 'backend/models'
+DATA_PATH = os.path.join(BASE_DIR, '../data/employee_tasks_hybrid.pkl')
+MODEL_DIR = os.path.join(BASE_DIR, 'models')
+MODEL_PATH = os.path.join(MODEL_DIR, 'task_classifier.pkl')
 
 # Ensure models directory exists
-os.makedirs('backend/models', exist_ok=True)
+os.makedirs(MODEL_DIR, exist_ok=True)
 
-# 1. Mock Dataset
-# Map tasks to specializations:
-# - John: "Database Admin"
-# - Sarah: "Finance Manager"
-# - Mike: "Sales Representative"
-# - Elena: "Marketing Specialist"
-# - David: "Security Analyst"
-
-data = [
-    ("Update the SQL server", "Database Admin"),
-    ("Optimize database queries", "Database Admin"),
-    ("Backup the data warehouse", "Database Admin"),
-    ("Fix the database connection error", "Database Admin"),
-    ("Migrate to new SQL version", "Database Admin"),
+def train():
+    print(f"📂 Loading data from: {DATA_PATH}")
     
-    ("Prepare the budget for Q4", "Finance Manager"),
-    ("Review the quarterly financial report", "Finance Manager"),
-    ("Calculate taxes for the year", "Finance Manager"),
-    ("Approve the expense reports", "Finance Manager"),
-    ("Audit the payroll", "Finance Manager"),
-    
-    ("Call the client regarding the new contract", "Sales Representative"),
-    ("Follow up with the lead from the conference", "Sales Representative"),
-    ("Prepare the sales pitch deck", "Sales Representative"),
-    ("Negotiate the deal terms", "Sales Representative"),
-    ("Schedule a demo with the prospect", "Sales Representative"),
-    
-    ("Draft the press release for the product launch", "Marketing Specialist"),
-    ("Update the social media campaign", "Marketing Specialist"),
-    ("Design the new brochure", "Marketing Specialist"),
-    ("Write a blog post about the update", "Marketing Specialist"),
-    ("Analyze website traffic", "Marketing Specialist"),
-    
-    ("Check the security logs for suspicious activity", "Security Analyst"),
-    ("Update the firewall rules", "Security Analyst"),
-    ("Patch the security vulnerability", "Security Analyst"),
-    ("Conduct a penetration test", "Security Analyst"),
-    ("Review user access permissions", "Security Analyst"),
-]
+    # 1. Load Data
+    try:
+        df = pd.read_pickle(DATA_PATH)
+    except FileNotFoundError:
+        print(f"❌ Error: Could not find dataset at {DATA_PATH}")
+        return
 
-X = [item[0] for item in data]
-y = [item[1] for item in data]
+    # 2. Prepare Features (X) and Target (y)
+    # Stack the list of embeddings into a proper 2D numpy matrix
+    print("⚙️ Processing features...")
+    X = np.vstack(df['task_embedding'].values)
+    y = df['employee_id']
 
-# 2. Create Pipeline
-model = make_pipeline(TfidfVectorizer(), MultinomialNB())
+    # 3. Split Data (Optional, but good for validation)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
 
-# 3. Train
-print("Training model...")
-model.fit(X, y)
+    # 4. Train the SVM Model
+    print("🧠 Training Support Vector Machine (SVM)...")
+    # We use LinearSVC as it is faster and standard for high-dim text vectors
+    svm_model = LinearSVC(random_state=42, dual='auto')
+    svm_model.fit(X_train, y_train)
 
-# 4. Save
-model_path = 'backend/models/task_classifier.pkl'
-joblib.dump(model, model_path)
-print(f"Model saved to {model_path}")
+    # 5. Validate
+    accuracy = svm_model.score(X_test, y_test)
+    print(f"✅ Training Complete! Model Accuracy: {accuracy:.2%}")
+
+    # 6. Save the Model
+    joblib.dump(svm_model, MODEL_PATH)
+    print(f"💾 Model saved to: {MODEL_PATH}")
+
+if __name__ == "__main__":
+    train()
