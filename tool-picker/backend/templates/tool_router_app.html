@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tool Router — Travel Booking AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset ───────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    /* ── Tokens ──────────────────────────────────────────────────────── */
+    :root {
+      --bg:           #06080f;
+      --surface:      rgba(255,255,255,0.035);
+      --surface-hov:  rgba(255,255,255,0.055);
+      --border:       rgba(255,255,255,0.07);
+      --border-hov:   rgba(255,255,255,0.14);
+      --text:         #e8eaf0;
+      --muted:        #6b7280;
+      --subtle:       #374151;
+
+      --flight:  #3b82f6;
+      --hotel:   #10b981;
+      --car:     #f59e0b;
+
+      --radius-sm: 0.5rem;
+      --radius-md: 0.75rem;
+      --radius-lg: 1.25rem;
+      --radius-xl: 1.75rem;
+    }
+
+    /* ── Base ────────────────────────────────────────────────────────── */
+    body {
+      font-family: "Inter", -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Ambient background orbs ─────────────────────────────────────── */
+    .bg-orbs {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.12;
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+    .orb-1 { width: 600px; height: 600px; background: #3b82f6; top: -200px; left: -150px; animation-delay: 0s; }
+    .orb-2 { width: 500px; height: 500px; background: #8b5cf6; top: 30%; right: -100px; animation-delay: -6s; }
+    .orb-3 { width: 400px; height: 400px; background: #10b981; bottom: -100px; left: 30%; animation-delay: -12s; }
+    @keyframes drift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(30px, 20px) scale(1.05); }
+    }
+
+    /* ── Layout shell ────────────────────────────────────────────────── */
+    .shell {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Navbar ──────────────────────────────────────────────────────── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 60px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(6,8,15,0.6);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      font-size: 0.85rem;
+    }
+    .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.3rem 0.85rem;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+      animation: pulse-dot 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ── Main content ────────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 4rem 1.25rem 5rem;
+      gap: 1.5rem;
+    }
+
+    /* ── Hero ────────────────────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      max-width: 580px;
+      margin-bottom: 0.5rem;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      background: linear-gradient(160deg, #fff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+    }
+    .hero p {
+      font-size: 1rem;
+      color: var(--muted);
+      line-height: 1.7;
+      font-weight: 400;
+    }
+
+    /* ── Glass card ──────────────────────────────────────────────────── */
+    .glass {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      width: 100%;
+      max-width: 640px;
+    }
+
+    /* ── Input card ──────────────────────────────────────────────────── */
+    .input-card {
+      padding: 1.75rem;
+    }
+    .input-card-header {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .textarea-wrap {
+      position: relative;
+    }
+    textarea {
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      padding: 0.85rem 1rem 2.75rem;
+      resize: none;
+      min-height: 100px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea:focus {
+      border-color: rgba(99,102,241,0.6);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+    textarea::placeholder { color: #3d4452; }
+    .textarea-hint {
+      position: absolute;
+      bottom: 0.65rem;
+      left: 1rem;
+      font-size: 0.68rem;
+      color: #3d4452;
+      pointer-events: none;
+    }
+
+    /* ── Examples ────────────────────────────────────────────────────── */
+    .examples-wrap {
+      margin-top: 1rem;
+    }
+    .examples-label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #3d4452;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 0.55rem;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.28rem 0.75rem;
+      font-family: inherit;
+      font-size: 0.73rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .chip:hover {
+      background: rgba(99,102,241,0.1);
+      border-color: rgba(99,102,241,0.4);
+      color: #a5b4fc;
+    }
+
+    /* ── Submit button ───────────────────────────────────────────────── */
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
+    .route-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 0.65rem 1.4rem;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: opacity 0.2s, transform 0.12s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(79,70,229,0.35);
+    }
+    .route-btn:hover { opacity: 0.9; box-shadow: 0 4px 28px rgba(79,70,229,0.55); }
+    .route-btn:active { transform: scale(0.97); }
+    .route-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+    .btn-arrow { font-size: 1rem; transition: transform 0.2s; }
+    .route-btn:hover .btn-arrow { transform: translateX(3px); }
+
+    /* ── Spinner ─────────────────────────────────────────────────────── */
+    .spinner {
+      display: none;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ───────────────────────────────────────────────────────── */
+    .error-banner {
+      display: none;
+      margin-top: 0.75rem;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-sm);
+      color: #fca5a5;
+      padding: 0.65rem 1rem;
+      font-size: 0.82rem;
+    }
+
+    /* ── Divider ─────────────────────────────────────────────────────── */
+    .divider {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--subtle);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Result card ─────────────────────────────────────────────────── */
+    .result-card {
+      display: none;
+      padding: 1.75rem;
+      animation: rise 0.4s cubic-bezier(0.22,1,0.36,1);
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(16px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .result-routed-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.85rem;
+    }
+
+    .result-winner {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.1rem 1.25rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.25);
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .result-winner::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.06;
+      background: var(--winner-color, #3b82f6);
+    }
+    .result-winner-glow {
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: var(--winner-color, #3b82f6);
+      filter: blur(60px);
+      opacity: 0.15;
+      pointer-events: none;
+    }
+    .winner-icon {
+      font-size: 2.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .winner-text { flex: 1; }
+    .winner-name {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .winner-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+    .winner-conf {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .winner-conf-pct {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .winner-conf-lbl {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    /* ── Agent tiles ─────────────────────────────────────────────────── */
+    .tiles-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem;
+    }
+    .tile {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.2);
+      padding: 0.9rem 0.85rem;
+      transition: border-color 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .tile.tile-active {
+      border-color: var(--tile-color);
+      box-shadow: 0 0 0 1px var(--tile-color), inset 0 0 30px rgba(0,0,0,0.2);
+    }
+    .tile-icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
+    .tile-name {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      margin-bottom: 0.6rem;
+      line-height: 1.3;
+    }
+    .tile-pct {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .tile-bar-bg {
+      height: 3px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      margin-top: 0.55rem;
+      overflow: hidden;
+    }
+    .tile-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.6s cubic-bezier(0.22,1,0.36,1);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .footer-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      color: var(--subtle);
+    }
+    .footer-dot { color: #1f2937; }
+  </style>
+</head>
+<body>
+
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="shell">
+
+  <!-- Navbar -->
+  <nav>
+    <a class="nav-logo" href="#">
+      <div class="nav-logo-icon">🧭</div>
+      Tool Router
+    </a>
+    <div class="nav-status">
+      <div class="status-dot"></div>
+      Model ready
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-eyebrow">✦ CAS Week 1 &nbsp;·&nbsp; Tool Picker</div>
+      <h1>Route any travel request to the right agent</h1>
+      <p>Describe your trip in plain language. The MLP classifier maps your sentence embedding to the correct booking tool — instantly.</p>
+    </div>
+
+    <!-- Input card -->
+    <div class="glass input-card">
+      <div class="input-card-header">Your request</div>
+
+      <div class="textarea-wrap">
+        <textarea
+          id="query"
+          rows="3"
+          placeholder="e.g. Book flights to Athens, a hotel there, and a car to explore — or a single request…"
+        ></textarea>
+        <span class="textarea-hint">⌘ Return to route</span>
+      </div>
+
+      <div class="examples-wrap">
+        <div class="examples-label">Try an example</div>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="route-btn" id="routeBtn" onclick="route()">
+          <div class="spinner" id="spinner"></div>
+          <span id="btnText">Route request</span>
+          <span class="btn-arrow" id="btnArrow">→</span>
+        </button>
+      </div>
+
+      <div class="error-banner" id="errorBanner"></div>
+    </div>
+
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <span class="footer-item">🤖 2-layer MLP · 384-dim embeddings</span>
+    <span class="footer-dot">·</span>
+    <span class="footer-item">📦 all-MiniLM-L6-v2</span>
+    <span class="footer-dot">·</span>
+    <span class="footer-item">⚡ Flask + PyTorch</span>
+  </footer>
+
+</div><!-- /shell -->
+
+<script>
+  /* ── Data ─────────────────────────────────────────────────────────── */
+  const EXAMPLES = [
+    { icon: "✈️", text: "Book a round-trip flight to Paris in June." },
+    { icon: "🏨", text: "I need a hotel downtown for three nights." },
+    { icon: "🚗", text: "Can I rent a compact car at the airport?" },
+    { icon: "🗺️", text: "Book flights to Athens, a nice hotel there to stay, and a mercedes van so I can move around." },
+    { icon: "🗺️", text: "I need a flight to Rome, a hotel near the Colosseum, and a car to explore Tuscany." },
+    { icon: "✈️", text: "What airlines fly direct to Tokyo from Zurich?" },
+    { icon: "🏨", text: "Looking for a pet-friendly hotel near the city centre." },
+    { icon: "🚗", text: "I want to pick up a minivan in Rome for two weeks." },
+  ];
+
+  /* ── Chips ────────────────────────────────────────────────────────── */
+  const chipsEl = document.getElementById("chips");
+  EXAMPLES.forEach(({ icon, text }) => {
+    const btn = document.createElement("button");
+    btn.className = "chip";
+    btn.innerHTML = `<span>${icon}</span><span>${text}</span>`;
+    btn.onclick = () => { document.getElementById("query").value = text; route(); };
+    chipsEl.appendChild(btn);
+  });
+
+  /* ── Route ────────────────────────────────────────────────────────── */
+  async function route() {
+    const sentence = document.getElementById("query").value.trim();
+    if (!sentence) return;
+
+    const btn       = document.getElementById("routeBtn");
+    const spinner   = document.getElementById("spinner");
+    const btnText   = document.getElementById("btnText");
+    const btnArrow  = document.getElementById("btnArrow");
+    const errBanner = document.getElementById("errorBanner");
+
+    btn.disabled           = true;
+    spinner.style.display  = "block";
+    btnText.textContent    = "Routing…";
+    btnArrow.style.display = "none";
+    errBanner.style.display = "none";
+
+    try {
+      const res = await fetch("/plan", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ sentence }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || `Server error ${res.status}`);
+      }
+      const data = await res.json();
+      const steps = data.steps;
+      if (!steps || steps.length === 0) throw new Error("Could not classify request");
+
+      const planParam = encodeURIComponent(steps.map(s => s.label).join(","));
+      const qsParam   = encodeURIComponent(steps.map(s => s.query).join("|"));
+      window.location.href =
+        `${steps[0].path}?plan=${planParam}&qs=${qsParam}&step=0&q=${encodeURIComponent(steps[0].query)}`;
+      return;
+    } catch (e) {
+      errBanner.textContent     = `⚠️  ${e.message}`;
+      errBanner.style.display   = "block";
+    } finally {
+      btn.disabled           = false;
+      spinner.style.display  = "none";
+      btnText.textContent    = "Route request";
+      btnArrow.style.display = "inline";
+    }
+  }
+
+  /* ── Keyboard shortcut ────────────────────────────────────────────── */
+  document.getElementById("query").addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) route();
+  });
+</script>
+</body>
+</html>

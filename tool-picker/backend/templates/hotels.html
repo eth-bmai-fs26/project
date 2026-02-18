@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotels — Tool Router</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #06080f; --surface: rgba(255,255,255,0.035); --surface-hov: rgba(255,255,255,0.055);
+      --border: rgba(255,255,255,0.07); --border-hov: rgba(255,255,255,0.14);
+      --text: #e8eaf0; --muted: #6b7280; --subtle: #374151;
+      --accent: #10b981;
+      --radius-sm: 0.5rem; --radius-md: 0.75rem; --radius-lg: 1.25rem; --radius-xl: 1.75rem;
+    }
+    body { font-family: "Inter", -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+
+    /* Orbs */
+    .bg-orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.1; animation: drift 18s ease-in-out infinite alternate; }
+    .orb-1 { width: 600px; height: 600px; background: #10b981; top: -200px; left: -150px; animation-delay: 0s; }
+    .orb-2 { width: 500px; height: 500px; background: #8b5cf6; top: 30%; right: -100px; animation-delay: -6s; }
+    .orb-3 { width: 400px; height: 400px; background: #059669; bottom: -100px; left: 30%; animation-delay: -12s; }
+    @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(30px,20px) scale(1.05); } }
+
+    /* Shell */
+    .shell { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* Nav */
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; height: 60px; border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); background: rgba(6,8,15,0.6); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 0.95rem; color: var(--text); text-decoration: none; }
+    .nav-logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 7px; display: grid; place-items: center; font-size: 0.85rem; }
+    .nav-right { display: flex; align-items: center; gap: 0.75rem; }
+    .nav-back { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--muted); text-decoration: none; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.85rem; transition: color 0.15s, border-color 0.15s; }
+    .nav-back:hover { color: var(--text); border-color: var(--border-hov); }
+    .nav-status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.85rem; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; animation: pulse-dot 2.5s ease-in-out infinite; }
+    @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+    /* Main */
+    main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 3rem 1.25rem 5rem; gap: 1rem; }
+
+    /* Page header */
+    .page-header { width: 100%; max-width: 860px; }
+    .page-eyebrow { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+    .page-title { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 900; letter-spacing: -0.035em; line-height: 1.1; background: linear-gradient(160deg, #fff 30%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.6rem; }
+    .page-query-banner { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.45rem 1rem; font-size: 0.8rem; color: var(--muted); max-width: 100%; }
+    .page-query-banner .query-text { color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .count-bar { width: 100%; max-width: 860px; display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: var(--muted); padding: 0.4rem 0; }
+    .count-bar strong { color: var(--text); font-weight: 600; }
+
+    /* Listing grid */
+    .listing-grid { width: 100%; max-width: 860px; display: grid; gap: 0.65rem; }
+
+    /* Card */
+    .listing-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      padding: 1.25rem 1.5rem; display: flex; align-items: flex-start; gap: 1.25rem;
+      transition: border-color 0.2s, background 0.2s; position: relative; overflow: hidden;
+      animation: cardIn 0.35s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    .listing-card:hover { border-color: var(--border-hov); background: var(--surface-hov); }
+    @keyframes cardIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    .listing-card:nth-child(1){animation-delay:.05s} .listing-card:nth-child(2){animation-delay:.10s}
+    .listing-card:nth-child(3){animation-delay:.15s} .listing-card:nth-child(4){animation-delay:.20s}
+    .listing-card:nth-child(5){animation-delay:.25s} .listing-card:nth-child(6){animation-delay:.30s}
+    .card-stripe { position: absolute; top:0; left:0; width:3px; height:100%; border-radius:2px 0 0 2px; background: var(--accent); }
+    .card-badge { font-size:0.62rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); border-radius:999px; padding:0.2rem 0.6rem; color: var(--accent); margin-top:0.25rem; }
+
+    /* Hotel icon */
+    .hc-icon { flex-shrink:0; width:52px; height:52px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:var(--radius-md); display:grid; place-items:center; font-size:1.5rem; }
+
+    /* Hotel body */
+    .hc-body { flex:1; min-width:0; }
+    .hc-name { font-size:1rem; font-weight:700; letter-spacing:-0.01em; line-height:1.2; margin-bottom:0.15rem; }
+    .hc-location { font-size:0.78rem; color:var(--muted); display:flex; align-items:center; gap:0.3rem; margin-bottom:0.35rem; }
+    .hc-meta { display:flex; align-items:center; gap:0.6rem; font-size:0.78rem; margin-bottom:0.4rem; flex-wrap:wrap; }
+    .hc-stars { color:#f59e0b; font-size:0.75rem; letter-spacing:-0.05em; }
+    .hc-rating { font-size:0.78rem; font-weight:700; color:#10b981; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:5px; padding:0.1rem 0.4rem; }
+    .hc-reviews { color:var(--muted); font-size:0.72rem; }
+    .hc-desc { font-size:0.78rem; color:var(--muted); line-height:1.5; margin-bottom:0.4rem; }
+    .card-tags { display:flex; flex-wrap:wrap; gap:0.3rem; }
+    .tag { background:rgba(255,255,255,0.035); border:1px solid var(--border); border-radius:999px; padding:0.18rem 0.55rem; font-size:0.67rem; color:var(--muted); white-space:nowrap; }
+
+    /* Price */
+    .card-price { flex-shrink:0; text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:0.15rem; }
+    .price-num { font-size:1.45rem; font-weight:900; letter-spacing:-0.04em; line-height:1; color:var(--accent); }
+    .price-unit { font-size:0.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.07em; }
+    .select-btn { display:inline-flex; align-items:center; gap:0.3rem; border:none; border-radius:var(--radius-sm); font-family:inherit; font-size:0.78rem; font-weight:600; padding:0.5rem 1rem; cursor:pointer; margin-top:0.35rem; color:#fff; background:var(--accent); transition:opacity 0.15s, transform 0.1s; white-space:nowrap; }
+    .select-btn:hover { opacity:0.85; }
+    .select-btn:active { transform:scale(0.97); }
+
+    /* Footer */
+    footer { border-top:1px solid var(--border); padding:1.5rem 2rem; display:flex; align-items:center; justify-content:center; gap:1.5rem; flex-wrap:wrap; }
+    .footer-item { font-size:0.72rem; color:var(--subtle); }
+    .footer-dot { color:#1f2937; }
+
+    /* Toast */
+    .toast { position:fixed; bottom:2rem; left:50%; transform:translateX(-50%) translateY(80px); background:#1e293b; border:1px solid rgba(255,255,255,0.12); border-radius:var(--radius-md); padding:0.8rem 1.4rem; font-size:0.88rem; font-weight:500; color:var(--text); box-shadow:0 8px 32px rgba(0,0,0,0.5); opacity:0; transition:transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.35s; z-index:999; white-space:nowrap; }
+    .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+    @media (max-width: 580px) { .card-price { display: none; } }
+
+    /* Plan progress bar */
+    .plan-bar { width: 100%; max-width: 860px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.5rem 1.25rem; display: none; }
+    .plan-bar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .plan-bar-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+    .plan-bar-counter { font-size: 0.72rem; color: var(--muted); }
+    .plan-bar-counter b { color: var(--text); }
+    .plan-steps { display: flex; align-items: center; }
+    .plan-step { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; }
+    .plan-bubble { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; font-size: 1rem; color: var(--muted); background: rgba(255,255,255,0.03); transition: all 0.3s; }
+    .plan-label { font-size: 0.63rem; font-weight: 600; color: var(--muted); text-align: center; white-space: nowrap; }
+    .s-done .plan-bubble { border-color: #4ade80; color: #4ade80; background: rgba(74,222,128,0.1); }
+    .s-done .plan-label { color: #4ade80; }
+    .s-active .plan-label { font-weight: 700; }
+    .plan-line { flex: 1; height: 2px; background: var(--border); min-width: 2rem; margin: 0 0.5rem; margin-bottom: 1.2rem; border-radius: 999px; transition: background 0.3s; }
+    .plan-line.l-done { background: #4ade80; }
+  </style>
+</head>
+<body>
+
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="shell">
+  <nav>
+    <a class="nav-logo" href="/"><div class="nav-logo-icon">🧭</div>Tool Router</a>
+    <div class="nav-right">
+      <a class="nav-back" href="/">← Back to router</a>
+      <div class="nav-status"><div class="status-dot"></div>Model ready</div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="page-header">
+      <div class="page-eyebrow">🏨 &nbsp;Hotel Booker</div>
+      <h1 class="page-title">Available Hotels</h1>
+      {% if query %}
+      <div class="page-query-banner">
+        <span>🔍</span>
+        <span>Your request: <span class="query-text">"{{ query }}"</span></span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="plan-bar" id="planBar">
+      <div class="plan-bar-header">
+        <span class="plan-bar-title">🗺️ &nbsp;Your travel plan</span>
+        <span class="plan-bar-counter" id="planCounter"></span>
+      </div>
+      <div class="plan-steps" id="planSteps"></div>
+    </div>
+
+    <div class="count-bar">
+      <span><strong>{{ items | length }}</strong> hotels found</span>
+      <span style="font-size:0.7rem;color:#374151">Demo data · prices per night</span>
+    </div>
+
+    <div class="listing-grid">
+      {% for h in items %}
+      <div class="listing-card">
+        <div class="card-stripe"></div>
+        <div class="hc-icon">🏨</div>
+
+        <div class="hc-body">
+          <div class="hc-name">{{ h.name }}</div>
+          <div class="hc-location"><span>📍</span><span>{{ h.location }}</span></div>
+          <div class="hc-meta">
+            <span class="hc-stars">
+              {% for i in range(h.stars) %}★{% endfor %}{% for i in range(5 - h.stars) %}☆{% endfor %}
+            </span>
+            <span class="hc-rating">{{ h.rating }}</span>
+            <span class="hc-reviews">{{ h.reviews }} reviews</span>
+          </div>
+          <div class="hc-desc">{{ h.desc }}</div>
+          <div class="card-tags">
+            {% for a in h.amenities %}<span class="tag">{{ a }}</span>{% endfor %}
+          </div>
+        </div>
+
+        <div class="card-price">
+          <div class="price-num">{{ h.currency }} {{ h.per_night }}</div>
+          <div class="price-unit">per night</div>
+          <button class="select-btn" onclick="book({{ loop.index }})">Reserve →</button>
+          {% if h.badge %}<div class="card-badge">{{ h.badge }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </main>
+
+  <footer>
+    <span class="footer-item">🤖 2-layer MLP · 384-dim embeddings</span>
+    <span class="footer-dot">·</span>
+    <span class="footer-item">📦 all-MiniLM-L6-v2</span>
+    <span class="footer-dot">·</span>
+    <span class="footer-item">⚡ Flask + PyTorch</span>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+  const NAMES = [{% for h in items %}"{{ h.name }}"{% if not loop.last %},{% endif %}{% endfor %}];
+  function book(i) {
+    const t = document.getElementById("toast");
+    t.textContent = "🏨 " + NAMES[i - 1] + " reserved! (demo)";
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2800);
+  }
+
+  /* ── Multi-step plan stepper ─────────────────────────────────────── */
+  (function () {
+    const p    = new URLSearchParams(window.location.search);
+    const plan = (p.get("plan") || "").split(",").filter(Boolean);
+    if (plan.length < 2) return;
+
+    const step = parseInt(p.get("step") || "0", 10);
+    const qs   = (p.get("qs") || "").split("|");
+
+    const META = {
+      FLIGHT_BOOKER:     { icon: "✈️", label: "Flights",    path: "/flights",  accent: "#3b82f6" },
+      HOTEL_BOOKER:      { icon: "🏨", label: "Hotels",     path: "/hotels",   accent: "#10b981" },
+      CAR_RENTAL_BOOKER: { icon: "🚗", label: "Car Rental", path: "/cars",     accent: "#f59e0b" },
+    };
+
+    document.getElementById("planBar").style.display = "block";
+    document.getElementById("planCounter").innerHTML =
+      `Step <b>${step + 1}</b> of <b>${plan.length}</b>`;
+
+    const stepsEl = document.getElementById("planSteps");
+    plan.forEach((label, i) => {
+      const m = META[label] || { icon: "?", label: label, path: "/", accent: "#6b7280" };
+
+      if (i > 0) {
+        const ln = document.createElement("div");
+        ln.className = "plan-line" + (i <= step ? " l-done" : "");
+        stepsEl.appendChild(ln);
+      }
+
+      const div = document.createElement("div");
+      div.className = "plan-step " + (i < step ? "s-done" : i === step ? "s-active" : "s-upcoming");
+
+      const icon   = i < step ? "✓" : m.icon;
+      const bStyle = i === step
+        ? `style="border-color:${m.accent};color:${m.accent};background:${m.accent}18;box-shadow:0 0 0 4px ${m.accent}18"`
+        : "";
+      const lStyle = i === step ? `style="color:${m.accent}"` : "";
+
+      div.innerHTML = `<div class="plan-bubble" ${bStyle}>${icon}</div><div class="plan-label" ${lStyle}>${m.label}</div>`;
+      stepsEl.appendChild(div);
+    });
+
+    /* Override every Book/Select/Reserve button */
+    document.querySelectorAll(".select-btn").forEach(btn => {
+      btn.onclick = null;
+      btn.addEventListener("click", function () {
+        const next = step + 1;
+        if (next < plan.length) {
+          const nm = META[plan[next]] || { path: "/" };
+          window.location.href =
+            `${nm.path}?plan=${encodeURIComponent(plan.join(","))}&qs=${encodeURIComponent(qs.join("|"))}&step=${next}&q=${encodeURIComponent(qs[next] || "")}`;
+        } else {
+          const t = document.getElementById("toast");
+          t.textContent = "🎉 All bookings confirmed! Returning home… (demo)";
+          t.classList.add("show");
+          setTimeout(() => { t.classList.remove("show"); window.location.href = "/"; }, 2500);
+        }
+      });
+    });
+  }());
+</script>
+</body>
+</html>
