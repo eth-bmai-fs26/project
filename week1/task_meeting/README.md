@@ -13,6 +13,7 @@ week1/task_meeting/
 ├── backend/
 │   ├── app.py                      # Main Flask application (API + Auto-Train Logic)
 │   ├── train_model.py               # Script to train the SVM classifier; run this only if `task_classifier.pkl` does not exist
+│   ├── .env                         # YOUR API KEY GOES HERE (OPENAI_API_KEY=...)
 │   └── models/
 │       └── task_classifier.pkl      # Saved SVM model (auto-generated after training)
 ├── data/
@@ -20,7 +21,7 @@ week1/task_meeting/
 │   └── final_transcripts_meetings.csv  # Source of meeting IDs and transcripts for task extraction
 ├── task_assigner_app.html           # Frontend interface (Bootstrap + JS)
 ├── requirements.txt                 # Python dependencies for the project
-└── README.md                        # Project documentation
+└── README.md                        # Setup and usage instructions
 ```
 
 ## Architecture
@@ -58,7 +59,11 @@ week1/task_meeting/
   
     Linux: Usually pre-installed. Update using sudo apt install python3.12.
 *   **Environment Manager**: `pyenv` (as configured in this project) and pyenv-virtualenv.
-*   **API Key**: An OpenAI-compatible API key (configured in a .env file).
+*   **API Key**: Inside the backend/ folder, create a new file and name it exactly `.env` (make sure there is a dot at the beginning).
+    Add your key: Open the file with any text editor and paste the following line:
+    ```text
+    OPENAI_API_KEY=your_actual_key_here
+    ```  
 
 ## Setup & Installation
 
