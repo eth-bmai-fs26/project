@@ -7,7 +7,7 @@ class SimpleUNet(nn.Module):
     """
     A simple UNet for 28x28 MNIST with Class Conditioning
     """
-    def __init__(self, base_ch=32, emb_dim=64, num_classes=10): # <--- CHANGE 1: Add num_classes arg
+    def __init__(self, base_ch=64, emb_dim=64, num_classes=10): # <--- CHANGE 1: Add num_classes arg
         super().__init__()
         self.in_ch = 1      
         self.out_ch = 1     
