@@ -14,7 +14,7 @@ import base64
 # pip install xlrd
 
 ## Set variables
-api_key = 'sk-MUW96idC6Mker23Qmy09Bg' #yourkey  
+api_key =#yourkey  
 os.environ["OPENAI_API_KEY"] = api_key
 base_url = "https://litellm.sph-prod.ethz.ch/v1"
 
