@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fashion Magazine Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, serif; background: #F5F0E8; color: #1A1208; display: flex; height: 100vh; overflow: hidden; }
+
+  #sidebar {
+    width: 340px; min-width: 340px; background: #1A1208; color: #F5F0E8;
+    display: flex; flex-direction: column; padding: 2rem 1.5rem; gap: 1.5rem;
+    overflow-y: auto;
+  }
+  #sidebar h1 { font-size: 1.3rem; border-bottom: 1px solid rgba(201,168,76,0.4); padding-bottom: 1rem; color: #C9A84C; }
+  label { font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: #C9A84C; display: block; margin-bottom: 0.4rem; }
+  input[type=text], textarea {
+    width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(201,168,76,0.3);
+    color: #F5F0E8; padding: 0.6rem 0.8rem; border-radius: 3px;
+    font-family: Georgia, serif; font-size: 0.85rem; resize: vertical;
+  }
+  input[type=text]:focus, textarea:focus { outline: none; border-color: #C9A84C; }
+  #styles-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .style-row { display: flex; gap: 0.4rem; }
+  .style-row input { flex: 1; }
+  .btn-remove { background: rgba(184,92,56,0.3); border: 1px solid rgba(184,92,56,0.5); color: #E8A080; cursor: pointer; border-radius: 3px; padding: 0 0.6rem; font-size: 1rem; }
+  .btn-remove:hover { background: rgba(184,92,56,0.6); }
+  #btn-add-style { background: none; border: 1px dashed rgba(201,168,76,0.4); color: #C9A84C; padding: 0.5rem; border-radius: 3px; cursor: pointer; font-size: 0.78rem; width: 100%; letter-spacing: 0.1em; }
+  #btn-add-style:hover { background: rgba(201,168,76,0.08); }
+  .action-btn { padding: 0.75rem 1rem; border: none; border-radius: 3px; font-family: Georgia, serif; font-size: 0.9rem; cursor: pointer; width: 100%; font-weight: bold; letter-spacing: 0.05em; transition: opacity 0.2s; }
+  .action-btn:hover { opacity: 0.85; }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  #btn-generate { background: #C9A84C; color: #1A1208; }
+  #btn-delete   { background: rgba(184,92,56,0.8); color: white; }
+
+  /* Progress bar */
+  #progress-bar-wrap { width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; display: none; }
+  #progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #C9A84C, #E8D5A3); border-radius: 3px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+
+  /* Progress log */
+  #progress-area { font-size: 0.75rem; color: #A09080; line-height: 1.9; max-height: 200px; overflow-y: auto; }
+  #progress-area .step { padding: 0.05rem 0; display: flex; align-items: flex-start; gap: 0.4rem; }
+  #progress-area .step::before { content: '·'; color: #555; flex-shrink: 0; }
+  #progress-area .step.active { color: #C9A84C; }
+  #progress-area .step.active::before { content: '▸'; color: #C9A84C; animation: pulse 1s infinite; }
+  #progress-area .step.done { color: #6BAF6B; }
+  #progress-area .step.done::before { content: '✓'; color: #6BAF6B; }
+  #progress-area .step.error { color: #E88080; }
+  #progress-area .step.error::before { content: '✕'; color: #E88080; }
+  @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
+
+  /* History */
+  #history-toggle { background: none; border: 1px solid rgba(201,168,76,0.2); color: #C9A84C; padding: 0.4rem; border-radius: 3px; cursor: pointer; font-size: 0.72rem; letter-spacing: 0.1em; width: 100%; }
+  #history-panel { font-size: 0.75rem; color: #A09080; max-height: 150px; overflow-y: auto; display: none; }
+  #history-panel.open { display: block; }
+  .history-entry { padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .history-entry strong { color: #D4C9B5; display: block; }
+
+  /* Main */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #preview-area { flex: 1; overflow: hidden; background: white; display: flex; align-items: center; justify-content: center; position: relative; }
+  #preview-iframe { width: 100%; height: 100%; border: none; display: none; }
+  #empty-state { text-align: center; color: #999; }
+  #empty-state h2 { font-size: 1.6rem; margin-bottom: 0.5rem; color: #C9A84C; }
+  #empty-state p { font-size: 0.85rem; }
+
+  /* Loading overlay */
+  #loading-overlay { display: none; position: absolute; inset: 0; background: rgba(245,240,232,0.9); align-items: center; justify-content: center; flex-direction: column; gap: 1rem; z-index: 10; }
+  #loading-overlay.visible { display: flex; }
+  .spinner { width: 44px; height: 44px; border: 3px solid rgba(201,168,76,0.2); border-top-color: #C9A84C; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-label { font-size: 0.88rem; color: #7A6040; font-family: Georgia, serif; max-width: 280px; text-align: center; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h1>✦ Fashion Generator</h1>
+
+  <div>
+    <label>Article Title</label>
+    <input type="text" id="inp-title" placeholder="e.g. Spring Trends 2025">
+  </div>
+
+  <div>
+    <label>Image Styles</label>
+    <div id="styles-list">
+      <div class="style-row">
+        <input type="text" placeholder="e.g. editorial high fashion, studio lighting">
+        <button class="btn-remove" onclick="removeStyle(this)">×</button>
+      </div>
+    </div>
+    <button id="btn-add-style" onclick="addStyle()">+ Add image style</button>
+  </div>
+
+  <div>
+    <label>Article Description</label>
+    <textarea id="inp-query" rows="4" placeholder="Describe in detail what the article should cover…"></textarea>
+  </div>
+
+  <button class="action-btn" id="btn-generate" onclick="generate()">▶ Generate</button>
+  <button class="action-btn" id="btn-delete" onclick="deleteHistory()">🗑 Delete History</button>
+
+  <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+  <div id="progress-area"></div>
+
+  <div>
+    <button id="history-toggle" onclick="toggleHistory()">▸ Session History</button>
+    <div id="history-panel"></div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="preview-area">
+    <div id="empty-state">
+      <h2>✦</h2>
+      <p>Fill in the form and press Generate<br>to create your fashion article.</p>
+    </div>
+    <iframe id="preview-iframe"></iframe>
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <div id="loading-label">Starting…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function addStyle() {
+    const list = document.getElementById('styles-list');
+    const row  = document.createElement('div');
+    row.className = 'style-row';
+    row.innerHTML = '<input type="text" placeholder="Describe image style…"><button class="btn-remove" onclick="removeStyle(this)">×</button>';
+    list.appendChild(row);
+  }
+
+  function removeStyle(btn) {
+    const list = document.getElementById('styles-list');
+    if (list.children.length > 1) btn.parentElement.remove();
+  }
+
+  function getStyles() {
+    return Array.from(document.querySelectorAll('.style-row input')).map(i => i.value.trim()).filter(Boolean);
+  }
+
+  function clearProgress() {
+    document.getElementById('progress-area').innerHTML = '';
+    setBar(0);
+    document.getElementById('progress-bar-wrap').style.display = 'none';
+  }
+
+  function addStep(msg, state) {
+    state = state || 'active';
+    const area = document.getElementById('progress-area');
+    area.querySelectorAll('.step.active').forEach(function(s) { s.classList.remove('active'); s.classList.add('done'); });
+    const div = document.createElement('div');
+    div.className = 'step ' + state;
+    div.textContent = msg;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+    document.getElementById('loading-label').textContent = msg;
+  }
+
+  function setBar(pct) {
+    const wrap = document.getElementById('progress-bar-wrap');
+    wrap.style.display = pct > 0 ? 'block' : 'none';
+    document.getElementById('progress-bar').style.width = pct + '%';
+  }
+
+  function generate() {
+    const title  = document.getElementById('inp-title').value.trim();
+    const query  = document.getElementById('inp-query').value.trim();
+    const styles = getStyles();
+    if (!title || !query) { alert('Please fill in title and article description.'); return; }
+
+    clearProgress();
+    const btn = document.getElementById('btn-generate');
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating…';
+    document.getElementById('loading-overlay').classList.add('visible');
+    document.getElementById('progress-bar-wrap').style.display = 'block';
+
+    fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title, image_styles: styles, article_query: query })
+    }).then(function(response) {
+      const reader  = response.body.getReader();
+      const decoder = new TextDecoder();
+      let   buffer  = '';
+
+      function read() {
+        reader.read().then(function(result) {
+          if (result.done) { finish(); return; }
+          buffer += decoder.decode(result.value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          lines.forEach(function(line) {
+            if (!line.startsWith('data: ')) return;
+            try { handleEvent(JSON.parse(line.slice(6))); } catch(e) {}
+          });
+          read();
+        });
+      }
+      read();
+    }).catch(function(err) {
+      addStep('❌ Network error: ' + err.message, 'error');
+      finish();
+    });
+
+    function handleEvent(evt) {
+      if (evt.type === 'progress') {
+        addStep(evt.message, 'active');
+        setBar(evt.pct);
+      } else if (evt.type === 'done') {
+        document.querySelectorAll('.step.active').forEach(function(s) { s.classList.remove('active'); s.classList.add('done'); });
+        setBar(100);
+        addStep('✅ Article ready!', 'done');
+        showPreview(evt.html_filename);
+        loadHistory();
+      } else if (evt.type === 'error') {
+        addStep('❌ ' + evt.message, 'error');
+      }
+    }
+
+    function finish() {
+      btn.disabled = false;
+      btn.textContent = '▶ Generate';
+      document.getElementById('loading-overlay').classList.remove('visible');
+    }
+  }
+
+  function showPreview(filename) {
+    document.getElementById('empty-state').style.display = 'none';
+    const iframe = document.getElementById('preview-iframe');
+    iframe.style.display = 'block';
+    iframe.src = '/article/' + filename;
+  }
+
+  async function deleteHistory() {
+    if (!confirm('Delete all session history? This cannot be undone.')) return;
+    const data = await (await fetch('/delete', { method: 'POST' })).json();
+    alert('Deleted: ' + (data.deleted.join(', ') || 'nothing to delete'));
+    document.getElementById('history-panel').innerHTML = '';
+    clearProgress();
+  }
+
+  function toggleHistory() {
+    const panel = document.getElementById('history-panel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) loadHistory();
+  }
+
+  async function loadHistory() {
+    const panel = document.getElementById('history-panel');
+    const data  = await (await fetch('/history/articles')).json();
+    if (!data.length) { panel.innerHTML = '<div class="history-entry">No history yet.</div>'; return; }
+    panel.innerHTML = data.slice(-10).reverse().map(function(e) {
+      return '<div class="history-entry"><strong>' + e.title + '</strong><span>' + (e.timestamp||'').slice(0,16).replace('T',' ') + '</span></div>';
+    }).join('');
+  }
+</script>
+</body>
+</html>
