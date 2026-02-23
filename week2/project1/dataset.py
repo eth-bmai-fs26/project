@@ -28,15 +28,6 @@ class SegmentationDataset(Dataset):
         if len(self.files) == 0:
             raise RuntimeError("No valid image-mask pairs found.")
 
-    @staticmethod
-    def _mask_name(fname: str) -> str:
-        """
-        Converts an original filename to its segmented counterpart.
-        E.g. 'ceramics-1.jpg' -> 'ceramics-1-segmented.jpg'
-        """
-        stem, ext = os.path.splitext(fname)
-        return f"{stem}-segmented{ext}"
-
         self.img_transform = T.Compose([
             T.Grayscale(),
             T.Resize(image_size),
@@ -48,6 +39,15 @@ class SegmentationDataset(Dataset):
             T.Resize(image_size, interpolation=T.InterpolationMode.NEAREST),
             T.ToTensor()
         ])
+
+    @staticmethod
+    def _mask_name(fname: str) -> str:
+        """
+        Converts an original filename to its segmented counterpart.
+        E.g. 'ceramics-1.jpg' -> 'ceramics-1-segmented.jpg'
+        """
+        stem, ext = os.path.splitext(fname)
+        return f"{stem}-segmented{ext}"
 
     def __len__(self):
         return len(self.files)
