@@ -1,4 +1,4 @@
-
+import torch
 from torch.utils.data import DataLoader
 
 # Dataset: loads (image, binary_mask) pairs from data/
@@ -7,8 +7,11 @@ from week2.project1.dataset import SegmentationDataset
 # U-Net model and its training function
 from week2.project1.unet import UNet, train_unet
 
-# Feedforward network for counting broken objects
-from week2.project1.counter import BrokenCounter, train_counter
+# FNN and CNN counters with their training functions
+from week2.project1.counter import BrokenCounter, BrokenCounterCNN, train_counter, train_counter_cnn
+
+# Utility for counting connected components in a binary mask
+from week2.project1.utils import count_components
 
 
 # --------------------------------------------------
@@ -20,8 +23,8 @@ from week2.project1.counter import BrokenCounter, train_counter
 ds = SegmentationDataset("data")
 
 # DataLoader with batch_size=1 (dataset is very small)
-# shuffle=True to avoid always seeing images in the same order
-dl = DataLoader(ds, batch_size=1, shuffle=True)
+# shuffle=False so that index i always corresponds to broken_labels[i]
+dl = DataLoader(ds, batch_size=1, shuffle=False)
 
 
 # --------------------------------------------------
@@ -38,57 +41,70 @@ unet = UNet(in_ch=1, base_ch=32)
 train_unet(unet, dl)
 
 
+# --------------------------------------------------
+# 3. GROUND-TRUTH BROKEN-OBJECT COUNTS
+# --------------------------------------------------
+
+# Number of broken fragments per image (order matches sorted dataset)
+# ceramics-1: 9, ceramics-2: 5, ceramics-3: 12,
+# ceramics-4: 0, ceramics-5: 28, ceramics-6: 12
+broken_labels = [9, 5, 12, 0, 28, 12]
 
 
 # --------------------------------------------------
-# 3. TRAIN THE BROKEN-OBJECT COUNTER
+# 4. TRAIN THE FNN BROKEN-OBJECT COUNTER
 # --------------------------------------------------
 
-# Ground-truth number of broken objects for each image
-# IMPORTANT: the order must match the dataset indexing
-broken_labels = [1, 1, 1, 1, 2, 3]
+# FNN counter: operates on the POOLED latent vector (B, 64)
+# produced by UNet.get_latent() (global average pooling applied)
+counter_fnn = BrokenCounter(unet.latent_dim)
 
-# Initialize the feedforward network
-# latent_dim is defined by the U-Net bottleneck
-counter = BrokenCounter(unet.latent_dim)
-
-# Train the counter using:
-# - latent vectors extracted from the trained U-Net
-# - Poisson loss for count regression
-train_counter(unet, counter, dl, broken_labels)
+train_counter(unet, counter_fnn, dl, broken_labels)
 
 
+# --------------------------------------------------
+# 5. TRAIN THE CNN BROKEN-OBJECT COUNTER
+# --------------------------------------------------
+
+# CNN counter: operates on the SPATIAL latent map (B, 64, 64, 64)
+# produced by UNet.get_latent_map() (no global average pooling)
+counter_cnn = BrokenCounterCNN(in_channels=unet.latent_dim)
+
+train_counter_cnn(unet, counter_cnn, dl, broken_labels)
 
 
-# pick one image from the dataset (for example the first one)
-idx = 4
-img, _ = ds[idx]
-img = img.unsqueeze(0)   # add batch dimension: [1, C, H, W]
+# --------------------------------------------------
+# 6. COMPARISON: FNN vs CNN COUNTER ON ALL IMAGES
+# --------------------------------------------------
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-img = img.to(device)
 
 unet.eval()
-counter.eval()
+counter_fnn.eval()
+counter_cnn.eval()
 
-with torch.no_grad():
-    # --- SEGMENTATION ---
-    logits = unet(img)
-    seg_mask = (torch.sigmoid(logits) > 0.5).float()
+print("\nInference results — FNN vs CNN Counter")
+print("-" * 58)
+print(f"{'Img':<12} {'Actual':>8} {'FNN pred':>10} {'CNN pred':>10} {'Segments':>10}")
+print("-" * 58)
 
-    # --- COUNT TOTAL OBJECTS ---
-    total_objects = count_components(seg_mask)
+for idx in range(len(ds)):
+    img, _ = ds[idx]
+    img_t = img.unsqueeze(0).to(device)
 
-    # --- LATENT VECTOR ---
-    latent = unet.get_latent(img)
+    with torch.no_grad():
+        # Segmentation mask
+        logits = unet(img_t)
+        seg_mask = (torch.sigmoid(logits) > 0.5).float()
+        total_objects = count_components(seg_mask)
 
-    # --- COUNT BROKEN OBJECTS ---
-    broken_objects = counter(latent)
-    broken_objects = int(torch.round(broken_objects).item())
+        # FNN path: pooled latent vector
+        z = unet.get_latent(img_t)
+        fnn_pred = int(torch.round(counter_fnn(z)).item())
 
-actual_broken_objects = broken_labels[idx]
-print("Inference results")
-print("-----------------")
-print(f"Total objects detected     : {total_objects}")
-print(f"Broken objects estimated   : {broken_objects}")
-print(f"Actual broken objects : {actual_broken_objects}")
+        # CNN path: spatial latent map
+        z_map = unet.get_latent_map(img_t)
+        cnn_pred = int(torch.round(counter_cnn(z_map)).item())
+
+    actual = broken_labels[idx]
+    print(f"ceramics-{idx+1:<3} {actual:>8} {fnn_pred:>10} {cnn_pred:>10} {total_objects:>10}")

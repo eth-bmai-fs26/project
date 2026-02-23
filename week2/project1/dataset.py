@@ -22,11 +22,20 @@ class SegmentationDataset(Dataset):
             if not f.startswith(".")
             and f.lower().endswith(valid_ext)
             and os.path.isfile(os.path.join(self.img_dir, f))
-            and os.path.isfile(os.path.join(self.mask_dir, f))
+            and os.path.isfile(os.path.join(self.mask_dir, self._mask_name(f)))
         ])
 
         if len(self.files) == 0:
             raise RuntimeError("No valid image-mask pairs found.")
+
+    @staticmethod
+    def _mask_name(fname: str) -> str:
+        """
+        Converts an original filename to its segmented counterpart.
+        E.g. 'ceramics-1.jpg' -> 'ceramics-1-segmented.jpg'
+        """
+        stem, ext = os.path.splitext(fname)
+        return f"{stem}-segmented{ext}"
 
         self.img_transform = T.Compose([
             T.Grayscale(),
@@ -47,7 +56,7 @@ class SegmentationDataset(Dataset):
         fname = self.files[idx]
 
         img = Image.open(os.path.join(self.img_dir, fname))
-        mask = Image.open(os.path.join(self.mask_dir, fname))
+        mask = Image.open(os.path.join(self.mask_dir, self._mask_name(fname)))
 
         img = self.img_transform(img)
         mask = self.mask_transform(mask)

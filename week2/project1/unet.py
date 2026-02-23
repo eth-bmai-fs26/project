@@ -82,6 +82,22 @@ class UNet(nn.Module):
         z = b.mean(dim=(2, 3))            # Global Average Pooling → (B, C)
         return z
 
+    def get_latent_map(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Returns the bottleneck feature map WITHOUT global average pooling.
+        Preserves spatial structure for use by CNN-based counters.
+
+        Shape: (B, base_ch*2, H/4, W/4)
+        For default settings (base_ch=32, input 256x256): (B, 64, 64, 64).
+        """
+        e1 = self.enc1(x)
+        d1 = self.down1(e1)
+
+        e2 = self.enc2(d1)
+        d2 = self.down2(e2)
+
+        return self.bottleneck(d2)       # (B, base_ch*2, H/4, W/4)
+
 
 def train_unet(model, dataloader, epochs=200, lr=1e-3):
     device = "cuda" if torch.cuda.is_available() else "cpu"
