@@ -50,7 +50,7 @@ Open http://127.0.0.1:5001
 fashion_app/
 ├── app.py                  ← Flask app + full AI pipeline
 ├── templates/
-│   ├── index.html          ← Main UI
+│   ├── fashion_magazine.html ← Main UI
 │   ├── article.html        ← Article wrapper
 │   └── error.html          ← Error page
 ├── static/                 ← Static assets
