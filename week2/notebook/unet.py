@@ -5,12 +5,21 @@ import torch.nn.functional as F
 
 class SimpleUNet(nn.Module):
     """
-    A simple UNet for 28x28 MNIST with Class Conditioning
+    A simple UNet with Class Conditioning.
+    Supports grayscale (in_channels=1) and RGB (in_channels=3) images.
+
+    args:
+    - base_ch: number of channels in the first layer (doubles every downsample)
+    - emb_dim: dimension of the time and class embedding
+    - num_classes: number of classes for conditioning (default 10 for MNIST)
+    - in_channels: number of input image channels (1=grayscale, 3=RGB)
+    
+    note: output channels are always the same as input channels, since we're predicting noise which has the same shape as the input image.
     """
-    def __init__(self, base_ch=64, emb_dim=64, num_classes=10): # <--- CHANGE 1: Add num_classes arg
+    def __init__(self, base_ch=64, emb_dim=64, num_classes=10, in_channels=1):
         super().__init__()
-        self.in_ch = 1      
-        self.out_ch = 1     
+        self.in_ch = in_channels
+        self.out_ch = in_channels
         self.base_ch = base_ch  
         self.emb_dim = emb_dim    
 
@@ -40,25 +49,17 @@ class SimpleUNet(nn.Module):
 
         self.out = nn.Conv2d(base_ch, self.out_ch, 1)    
 
-    def forward(self, x, t, labels=None): # <--- CHANGE 3: Add labels argument
+    def forward(self, x, t, labels):
         """
-        x: (B, 1, 28, 28)
+        x: (B, C, H, W)
         t: (B,)
-        labels: (B,) IntTensor containing values 0-9
+        labels: (B,) IntTensor containing class indices (0-9)
         """
-        # 1. Create time embedding 
-        time_emb = sinusoidal_time_embedding(t, self.emb_dim)
         
-        # 2. Add Class conditioning
-        if labels is not None:
-            label_emb = self.label_emb(labels) # Lookup embedding: (B, emb_dim)
-            time_emb = time_emb + label_emb    # Simple fusion: (B, emb_dim)
-            
-        # 3. Pass combined embedding through MLP
-        cond_emb = self.cond_mlp(time_emb)
-
-        # The rest of the network remains EXACTLY the same!
-        # The 'cond_emb' now carries both time and class info to every block.
+        # create time and label embeddings and combined them into a single conditioning embedding
+        time_emb = sinusoidal_time_embedding(t, self.emb_dim)
+        label_emb = self.label_emb(labels)
+        cond_emb = self.cond_mlp(time_emb + label_emb)
         
         # encoder
         e1 = self.enc1(x, cond_emb)                
