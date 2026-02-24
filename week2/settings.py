@@ -10,11 +10,16 @@ import json
 import requests
 import base64
 
+import html as html_module
+import re
+from html.parser import HTMLParser
+import system_prompts
+
 # pip install langchain langchain-core
 # pip install xlrd
 
 ## Set variables
-api_key =#yourkey  
+api_key ="sk-6n3PyoEDbwxOyLpi83fopg" 
 os.environ["OPENAI_API_KEY"] = api_key
 base_url = "https://litellm.sph-prod.ethz.ch/v1"
 
@@ -31,23 +36,7 @@ def save_chat_history(user_input: str, ai_html: str):
 
     if not os.path.exists(CHAT_HISTORY_FILE):
         with open(CHAT_HISTORY_FILE, "w") as f:
-            f.write("""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Chat History</title>
-    <style>
-        body { font-family: Georgia, serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #333; }
-        h1 { text-align: center; }
-        .entry { border-bottom: 2px solid #eee; padding: 20px 0; }
-        .timestamp { color: #999; font-size: 0.85em; }
-        .user-query { background: #f0f4ff; padding: 10px 15px; border-radius: 8px; margin: 10px 0; }
-        .ai-response { margin-top: 10px; }
-    </style>
-</head>
-<body>
-<h1>Chat History</h1>
-""")
+            f.write(system_prompts.html_chat_history())
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(CHAT_HISTORY_FILE, "a") as f:
@@ -191,57 +180,206 @@ def llm_chat(prompt: str) -> str:
 OUTPUT_DIR = "output"
 
 
+FALLBACK_HTML_TEMPLATE = system_prompts.html_default()
+
 def validate_html(html: str, image_paths: list[str]) -> tuple[bool, list[str]]:
     """
     Validates the generated HTML.
     Returns (is_valid, list_of_errors).
     """
-    from html.parser import HTMLParser
-
     errors = []
 
-    # Strip markdown fences if the LLM wrapped the output
+    # 1. Strip markdown fences if the LLM wrapped the output
     stripped = html.strip()
     if stripped.startswith("```"):
         lines = stripped.split("\n")
-        lines = lines[1:]  # remove opening fence
+        lines = lines[1:]
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         html = "\n".join(lines)
 
-    if "<!DOCTYPE html>" not in html and "<html" not in html:
-        errors.append("missing <!DOCTYPE html> or <html> tag")
+    # 2. Basic structural checks
+    required_tags = {
+        "<!DOCTYPE html>": "missing <!DOCTYPE html> declaration",
+        "<html":           "missing <html> tag",
+        "</html>":         "missing closing </html> tag",
+        "<head":           "missing <head> tag",
+        "</head>":         "missing closing </head> tag",
+        "<body":           "missing <body> tag",
+        "</body>":         "missing closing </body> tag",
+        "<title":          "missing <title> tag",
+        "<style":          "missing <style> tag (no CSS)",
+    }
+    for token, message in required_tags.items():
+        if token not in html:
+            errors.append(message)
 
-    if "</html>" not in html:
-        errors.append("missing closing </html> tag")
-
-    if "<body" not in html:
-        errors.append("missing <body> tag")
-
-    if "<style" not in html:
-        errors.append("missing <style> tag (no CSS)")
-
+    # 3. Image reference checks
     for img in image_paths:
         if img not in html:
             errors.append(f"image '{img}' not referenced in HTML")
 
-    # Check that HTML is parseable
+    # 4. Full parser: tag balancing, attribute validation, nesting
+    VOID_ELEMENTS = {
+        "area", "base", "br", "col", "embed", "hr", "img",
+        "input", "link", "meta", "param", "source", "track", "wbr",
+    }
+    UNIQUE_TAGS = {"html", "head", "body", "title"}
+
     class HTMLValidator(HTMLParser):
         def __init__(self):
             super().__init__()
-            self.parse_error = False
-        def handle_starttag(self, tag, attrs):
-            pass
-        def handle_endtag(self, tag):
-            pass
+            self.stack: list[str] = []
+            self.tag_counts: dict[str, int] = {}
+            self.parse_errors: list[str] = []
+            self.img_issues: list[str] = []
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
+            attr_dict = dict(attrs)
+            self.tag_counts[tag] = self.tag_counts.get(tag, 0) + 1
+
+            if tag in UNIQUE_TAGS and self.tag_counts[tag] > 1:
+                self.parse_errors.append(f"duplicate <{tag}> tag found")
+
+            if tag == "img":
+                if "src" not in attr_dict or not attr_dict.get("src", "").strip():
+                    self.img_issues.append("an <img> tag is missing a valid src attribute")
+                if "alt" not in attr_dict:
+                    self.img_issues.append("an <img> tag is missing an alt attribute")
+
+            if tag == "a":
+                href = attr_dict.get("href", "").strip()
+                if not href:
+                    self.parse_errors.append("an <a> tag is missing a valid href attribute")
+
+            if tag not in VOID_ELEMENTS:
+                self.stack.append(tag)
+
+        def handle_endtag(self, tag: str):
+            if tag in VOID_ELEMENTS:
+                return
+            if not self.stack:
+                self.parse_errors.append(f"unexpected closing tag </{tag}> (stack is empty)")
+                return
+            if self.stack[-1] == tag:
+                self.stack.pop()
+            else:
+                if tag in self.stack:
+                    while self.stack and self.stack[-1] != tag:
+                        skipped = self.stack.pop()
+                        self.parse_errors.append(f"unclosed tag <{skipped}> before </{tag}>")
+                    if self.stack:
+                        self.stack.pop()
+                else:
+                    self.parse_errors.append(f"unexpected closing tag </{tag}> (no matching open tag)")
+
+        def handle_entityref(self, name: str):
+            try:
+                html_module.unescape(f"&{name};")
+            except Exception:
+                self.parse_errors.append(f"unknown HTML entity: &{name};")
+
+        def close(self):
+            super().close()
+            for tag in self.stack:
+                self.parse_errors.append(f"unclosed tag <{tag}> at end of document")
 
     try:
         validator = HTMLValidator()
         validator.feed(html)
-    except Exception:
-        errors.append("HTML parsing error")
+        validator.close()
+        errors.extend(validator.parse_errors)
+        errors.extend(validator.img_issues)
+    except Exception as exc:
+        errors.append(f"HTML parsing exception: {exc}")
+
+    # 5. CSS check
+    style_blocks = re.findall(r"<style[^>]*>(.*?)</style>", html, re.DOTALL | re.IGNORECASE)
+    if style_blocks:
+        combined_css = "\n".join(style_blocks)
+        open_braces  = combined_css.count("{")
+        close_braces = combined_css.count("}")
+        if open_braces != close_braces:
+            errors.append(
+                f"CSS brace mismatch: {open_braces} opening vs {close_braces} closing braces"
+            )
+
+    # 6. Meta charset recommendation
+    if "charset" not in html.lower():
+        errors.append("no charset meta tag found (recommended: <meta charset='UTF-8'>)")
 
     return (len(errors) == 0, errors)
+
+
+
+def safe_html_pipeline(
+    generate_fn,
+    image_paths: list[str],
+    max_attempts: int = 3,
+) -> tuple[str, bool, list[str]]:
+    """
+    Tries to generate and validate HTML up to max_attempts times.
+    On final failure, wraps the raw content in a safe fallback template.
+
+    Args:
+        generate_fn:  Callable that accepts the attempt number (int) and returns
+                      an HTML string. Use the attempt number to adjust your prompt
+                      on retries, e.g. feeding back the previous errors to the LLM.
+        image_paths:  List of image filenames/paths that must appear in the HTML.
+        max_attempts: How many generation attempts before falling back (default 3).
+
+    Returns:
+        html        – the final HTML string (valid or fallback)
+        is_valid    – True only if a generated attempt passed validation
+        last_errors – validation errors from the last attempt (empty if valid)
+    """
+    last_html   = ""
+    last_errors = []
+
+    for attempt in range(1, max_attempts + 1):
+        candidate = generate_fn(attempt)
+        is_valid, errors = validate_html(candidate, image_paths)
+
+        if is_valid:
+            return candidate, True, []
+
+        last_html   = candidate
+        last_errors = errors
+        print(f"[Attempt {attempt}/{max_attempts}] Validation failed:")
+        for error in errors:
+            print(f"  - {error}")
+
+    # All attempts exhausted — escape and wrap in the safe fallback template
+    print("[Fallback] Wrapping raw content in predefined HTML template.")
+    safe_content = html_module.escape(last_html)
+    fallback     = FALLBACK_HTML_TEMPLATE.format(content=safe_content)
+    return fallback, False, last_errors
+
+if __name__ == "__main__":
+
+    def my_generator(attempt: int) -> str:
+        """
+        Plug your real LLM call in here.
+        The attempt number lets you pass previous errors back to the model.
+        """
+        # Example: a deliberately broken HTML to trigger the fallback
+        return f"<html><body>Attempt {attempt} - broken HTML"
+
+    final_html, succeeded, errors = safe_html_pipeline(
+        generate_fn=my_generator,
+        image_paths=["hero.png", "logo.png"],
+        max_attempts=3,
+    )
+
+    if succeeded:
+        print("\n Valid HTML generated.")
+    else:
+        print(f"\n  Fell back to safe template. Last errors: {errors}")
+
+    # Write result to file
+    with open("output.html", "w", encoding="utf-8") as f:
+        f.write(final_html)
+    print("Written to output.html")
 
 
 def save_image(image_data: str, path: str):
