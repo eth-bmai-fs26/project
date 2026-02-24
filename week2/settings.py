@@ -19,7 +19,7 @@ import system_prompts
 # pip install xlrd
 
 ## Set variables
-api_key ="sk-6n3PyoEDbwxOyLpi83fopg" 
+api_key ="YourKEY HERE" 
 os.environ["OPENAI_API_KEY"] = api_key
 base_url = "https://litellm.sph-prod.ethz.ch/v1"
 
