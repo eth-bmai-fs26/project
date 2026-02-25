@@ -419,20 +419,26 @@
     read();
   }
 
-  function lockUI() {
+  function lockUI(mode) {
+    // mode: 'generate' or 'feedback'
     document.getElementById('btn-generate').disabled = true;
-    document.getElementById('btn-generate').textContent = '⏳ Generating…';
     var fb = document.getElementById('btn-feedback');
     if (fb) fb.disabled = true;
     document.getElementById('loading-overlay').classList.add('visible');
     document.getElementById('progress-bar-wrap').style.display = 'block';
+
+    if (mode === 'feedback') {
+      if (fb) fb.textContent = '⏳ Processing…';
+    } else {
+      document.getElementById('btn-generate').textContent = '⏳ Generating…';
+    }
   }
 
   function unlockUI() {
     document.getElementById('btn-generate').disabled = false;
     document.getElementById('btn-generate').textContent = '▶ Generate';
     var fb = document.getElementById('btn-feedback');
-    if (fb) fb.disabled = false;
+    if (fb) { fb.disabled = false; fb.textContent = '✏️ Apply Feedback'; }
     document.getElementById('loading-overlay').classList.remove('visible');
   }
 
@@ -445,7 +451,7 @@
 
     currentImageStyles = styles; // save for feedback
     clearProgress();
-    lockUI();
+    lockUI('generate');
 
     fetch('/generate', {
       method: 'POST',
@@ -468,8 +474,7 @@
     if (!currentFilename) { alert('No article to apply feedback to. Generate one first.'); return; }
 
     clearProgress();
-    lockUI();
-    document.getElementById('btn-generate').textContent = '⏳ Processing…';
+    lockUI('feedback');
 
     fetch('/feedback', {
       method: 'POST',
