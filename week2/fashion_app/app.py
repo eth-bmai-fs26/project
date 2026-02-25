@@ -232,9 +232,16 @@ EXISTING HTML TO EDIT:
 
 
 def validate_html(html: str, image_filenames: list) -> tuple[bool, list, str]:
-    """Validates generated HTML structure and image references."""
+    """
+    Validates generated HTML: structure, tag balancing, CSS braces, image references.
+    Returns (is_valid, errors, cleaned_html).
+    """
+    import re
+    from html.parser import HTMLParser
+
     errors = []
-    # Strip markdown fences if LLM wrapped output
+
+    # 1. Strip markdown fences if LLM wrapped output
     s = html.strip()
     if s.startswith("```"):
         lines = s.split("\n")[1:]
@@ -242,20 +249,157 @@ def validate_html(html: str, image_filenames: list) -> tuple[bool, list, str]:
             lines = lines[:-1]
         html = "\n".join(lines)
 
-    if "<!DOCTYPE html>" not in html and "<html" not in html:
-        errors.append("missing <!DOCTYPE html>")
-    if "</html>" not in html:
-        errors.append("missing </html>")
-    if "<body" not in html:
-        errors.append("missing <body>")
-    if "<style" not in html:
-        errors.append("missing <style>")
+    # 2. Basic structural checks
+    required = {
+        "<!DOCTYPE html>": "missing <!DOCTYPE html> declaration",
+        "<html":           "missing <html> tag",
+        "</html>":         "missing closing </html> tag",
+        "<body":           "missing <body> tag",
+        "</body>":         "missing closing </body> tag",
+        "<style":          "missing <style> tag (no CSS)",
+    }
+    for token, message in required.items():
+        if token not in html:
+            errors.append(message)
+
+    # 3. Image reference checks
     for f in image_filenames:
         if f not in html:
-            errors.append(f"image '{f}' not referenced")
+            errors.append(f"image '{f}' not referenced in HTML")
+
+    # 4. Tag balancing and attribute validation
+    VOID_ELEMENTS = {
+        "area", "base", "br", "col", "embed", "hr", "img",
+        "input", "link", "meta", "param", "source", "track", "wbr",
+    }
+    UNIQUE_TAGS = {"html", "head", "body", "title"}
+
+    class HTMLValidator(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.stack = []
+            self.tag_counts = {}
+            self.parse_errors = []
+
+        def handle_starttag(self, tag, attrs):
+            attr_dict = dict(attrs)
+            self.tag_counts[tag] = self.tag_counts.get(tag, 0) + 1
+            if tag in UNIQUE_TAGS and self.tag_counts[tag] > 1:
+                self.parse_errors.append(f"duplicate <{tag}> tag found")
+            if tag == "img":
+                if "src" not in attr_dict or not attr_dict.get("src", "").strip():
+                    self.parse_errors.append("an <img> tag is missing a valid src attribute")
+            if tag not in VOID_ELEMENTS:
+                self.stack.append(tag)
+
+        def handle_endtag(self, tag):
+            if tag in VOID_ELEMENTS:
+                return
+            if not self.stack:
+                self.parse_errors.append(f"unexpected closing tag </{tag}> (stack is empty)")
+                return
+            if self.stack[-1] == tag:
+                self.stack.pop()
+            else:
+                if tag in self.stack:
+                    while self.stack and self.stack[-1] != tag:
+                        skipped = self.stack.pop()
+                        self.parse_errors.append(f"unclosed tag <{skipped}> before </{tag}>")
+                    if self.stack:
+                        self.stack.pop()
+                else:
+                    self.parse_errors.append(f"unexpected closing tag </{tag}> (no matching open tag)")
+
+        def close(self):
+            super().close()
+            for tag in self.stack:
+                self.parse_errors.append(f"unclosed tag <{tag}> at end of document")
+
+    try:
+        v = HTMLValidator()
+        v.feed(html)
+        v.close()
+        errors.extend(v.parse_errors)
+    except Exception as exc:
+        errors.append(f"HTML parsing exception: {exc}")
+
+    # 5. CSS brace balance check
+    style_blocks = re.findall(r"<style[^>]*>(.*?)</style>", html, re.DOTALL | re.IGNORECASE)
+    if style_blocks:
+        css = "\n".join(style_blocks)
+        if css.count("{") != css.count("}"):
+            errors.append(f"CSS brace mismatch: {css.count('{')}' opening vs {css.count('}')}' closing")
 
     return (len(errors) == 0, errors, html)
 
+
+
+
+def patch_truncated_html(html: str) -> str:
+    """
+    If the LLM output was truncated and is missing closing tags,
+    append them so validation has a chance to pass.
+    """
+    html = html.strip()
+    if "</li>" not in html and "<li" in html:
+        html += "\n</li>"
+    if "</ul>" not in html and "<ul" in html:
+        html += "\n</ul>"
+    if "</ol>" not in html and "<ol" in html:
+        html += "\n</ol>"
+    if "</p>" not in html.split("<body")[-1] and "<p" in html.split("<body")[-1]:
+        html += "\n</p>"
+    if "</article>" not in html and "<article" in html:
+        html += "\n</article>"
+    if "</section>" not in html and "<section" in html:
+        html += "\n</section>"
+    opens  = html.count("<div")
+    closes = html.count("</div>")
+    html  += "\n</div>" * max(0, opens - closes)
+    if "</main>" not in html and "<main" in html:
+        html += "\n</main>"
+    if "</body>" not in html:
+        html += "\n</body>"
+    if "</html>" not in html:
+        html += "\n</html>"
+    return html
+
+def safe_html_pipeline(generate_fn, image_filenames: list,
+                       emit=None, max_attempts: int = 3) -> tuple[str, bool]:
+    """
+    Tries to generate and validate HTML up to max_attempts times.
+    On each retry, passes previous errors back to the LLM so it can fix them.
+    Falls back to emergency_fallback_html if all attempts fail.
+
+    generate_fn(attempt, previous_errors) → raw HTML string
+    """
+    last_errors = []
+    last_html   = ""
+
+    for attempt in range(1, max_attempts + 1):
+        if emit:
+            emit(f"HTML generation attempt {attempt}/{max_attempts}…")
+        raw = generate_fn(attempt, last_errors)
+        fixed = fix_image_paths(raw, image_filenames)
+        # If output was truncated, close any missing structural tags
+        fixed = patch_truncated_html(fixed)
+        valid, errors, cleaned = validate_html(fixed, image_filenames)
+
+        if valid:
+            if emit:
+                emit("✅ HTML validated successfully.")
+            return cleaned, True
+
+        last_errors = errors
+        last_html   = cleaned
+        if emit:
+            emit(f"⚠️ Validation failed ({len(errors)} errors), retrying with corrections…")
+        print(f"[Attempt {attempt}/{max_attempts}] Errors: {errors}")
+
+    # All attempts exhausted
+    if emit:
+        emit("🚨 Max retries reached — using emergency fallback HTML.")
+    return last_html, False
 
 def fix_image_paths(html: str, image_filenames: list) -> str:
     """
@@ -340,28 +484,31 @@ def run_pipeline(title: str, image_styles: list, article_query: str,
 
     step += 1
     emit(step, total, "Assembling final HTML page…")
-    prompt = build_fresh_prompt(title, article_query, trend_data,
-                                article_text, image_filenames)
+    base_prompt = build_fresh_prompt(title, article_query, trend_data,
+                                     article_text, image_filenames)
     client = get_client()
-    MAX_RETRIES = 3
-    final_html = ""
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        emit(step, total, f"HTML generation attempt {attempt}/{MAX_RETRIES}…")
-        raw = client.chat.completions.create(
+    def generate_fn(attempt, previous_errors):
+        # On retries, feed the previous errors back to the LLM so it can fix them
+        prompt = base_prompt
+        if previous_errors:
+            prompt += f"""
+
+IMPORTANT — Your previous attempt had these HTML errors. Please fix all of them:
+{chr(10).join(f"  - {e}" for e in previous_errors)}
+"""
+        return client.chat.completions.create(
             model="anthropic/claude-sonnet-4-5",
             messages=[{"role": "user", "content": prompt}],
+            max_tokens=4096,
         ).choices[0].message.content
 
-        fixed = fix_image_paths(raw, image_filenames)
-        valid, errors, cleaned = validate_html(fixed, image_filenames)
-        if valid:
-            final_html = cleaned
-            emit(step, total, "✅ HTML validated successfully.")
-            break
-        emit(step, total, f"⚠️ Validation failed ({', '.join(errors)}), retrying…")
-    else:
-        emit(step, total, "🚨 Max retries reached — using emergency fallback HTML.")
+    final_html, succeeded = safe_html_pipeline(
+        generate_fn=generate_fn,
+        image_filenames=image_filenames,
+        emit=lambda msg: emit(step, total, msg),
+    )
+    if not succeeded:
         final_html = emergency_fallback_html(title, article_text, image_filenames)
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -439,26 +586,29 @@ def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
     # Apply text feedback + image replacements to existing HTML
     step += 1
     emit(step, total, "Applying feedback to article…")
-    prompt = build_feedback_prompt(existing_html, text_feedback, updated_image_map)
-
+    base_prompt = build_feedback_prompt(existing_html, text_feedback, updated_image_map)
     client = get_client()
-    MAX_RETRIES = 3
-    final_html = ""
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        emit(step, total, f"Feedback application attempt {attempt}/{MAX_RETRIES}…")
-        raw = client.chat.completions.create(
+    def generate_fn(attempt, previous_errors):
+        prompt = base_prompt
+        if previous_errors:
+            prompt += f"""
+
+IMPORTANT — Your previous attempt had these HTML errors. Please fix all of them:
+{chr(10).join(f"  - {e}" for e in previous_errors)}
+"""
+        return client.chat.completions.create(
             model="anthropic/claude-sonnet-4-5",
             messages=[{"role": "user", "content": prompt}],
+            max_tokens=4096,
         ).choices[0].message.content
 
-        valid, errors, cleaned = validate_html(raw, final_image_filenames)
-        if valid:
-            final_html = cleaned
-            emit(step, total, "✅ HTML validated successfully.")
-            break
-        emit(step, total, f"⚠️ Validation failed ({', '.join(errors)}), retrying…")
-    else:
+    final_html, succeeded = safe_html_pipeline(
+        generate_fn=generate_fn,
+        image_filenames=final_image_filenames,
+        emit=lambda msg: emit(step, total, msg),
+    )
+    if not succeeded:
         emit(step, total, "🚨 Max retries reached — keeping original article.")
         final_html = existing_html
 
