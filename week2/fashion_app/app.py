@@ -17,14 +17,15 @@ from flask_cors import CORS
 CORS(app)
 
 # ── Config ────────────────────────────────────────────────────────────────────
-API_KEY  = os.environ.get("OPENAI_API_KEY")
+BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
+API_KEY     = os.environ.get("OPENAI_API_KEY")
 if not API_KEY:
     raise ValueError("OPENAI_API_KEY not found. Please create a .env file with your key.")
 
-BASE_URL     = "https://litellm.sph-prod.ethz.ch/v1"
-DATA_PATH    = "Data/fashion_data_2018_2022.xls"
-OUTPUT_DIR   = "output"
-HISTORY_DIR  = "history"
+BASE_URL    = "https://litellm.sph-prod.ethz.ch/v1"
+DATA_PATH   = os.path.join(BASE_DIR, "Data", "fashion_data_2018_2022.xls")
+OUTPUT_DIR  = os.path.join(BASE_DIR, "output")
+HISTORY_DIR = os.path.join(BASE_DIR, "history")
 
 # Load dataset once at startup
 try:
@@ -41,6 +42,7 @@ def get_client():
 
 
 def save_history(kind: str, entry: dict):
+    """Appends entry to history/{kind}.json — we save but never load for generation."""
     os.makedirs(HISTORY_DIR, exist_ok=True)
     path = os.path.join(HISTORY_DIR, f"{kind}.json")
     history = []
@@ -54,15 +56,12 @@ def save_history(kind: str, entry: dict):
 
 
 def load_history(kind: str) -> list:
+    """Used only for the history panel in the UI — never for generation."""
     path = os.path.join(HISTORY_DIR, f"{kind}.json")
     if not os.path.exists(path):
         return []
     with open(path) as f:
         return json.load(f)
-
-
-def get_fashion_inspiration() -> str:
-    return FASHION_DATA
 
 
 def generate_image(title: str, style: str) -> str:
@@ -76,6 +75,7 @@ def generate_image(title: str, style: str) -> str:
         n=1,
     )
     image_data = resp.data[0]
+    # DALL-E returns either a URL or base64 — handle both
     raw = image_data.url if image_data.url else image_data.b64_json
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -84,11 +84,13 @@ def generate_image(title: str, style: str) -> str:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     if raw.startswith("http"):
+        # URL → download image bytes and save to disk
         r = requests.get(raw, timeout=30)
         r.raise_for_status()
         with open(path, "wb") as f:
             f.write(r.content)
     else:
+        # Base64 → decode and save to disk
         with open(path, "wb") as f:
             f.write(base64.b64decode(raw))
 
@@ -97,6 +99,7 @@ def generate_image(title: str, style: str) -> str:
 
 
 def generate_article(query: str) -> str:
+    """Generates article text via Claude Sonnet."""
     client = get_client()
     resp = client.chat.completions.create(
         model="anthropic/claude-sonnet-4-5",
@@ -107,74 +110,53 @@ def generate_article(query: str) -> str:
     return article
 
 
-def parse_image_feedback(feedback: str, image_filenames: list) -> list[int]:
+def should_regenerate_image(feedback: str) -> bool:
     """
-    Uses the LLM to parse which images (by 1-based index) the user wants regenerated.
-    Returns a list of 1-based indices, e.g. [2] or [1, 3] or [] for text-only feedback.
+    Uses LLM to decide if the user actually wants the image changed.
+    Returns False if feedback is empty, positive-only, or says keep as is.
+    Returns True if the user wants any visual change.
     """
-    if not image_filenames:
-        return []
+    if not feedback or not feedback.strip():
+        return False
 
     client = get_client()
-    prompt = f"""You are a feedback parser for a fashion article generator.
-The article has {len(image_filenames)} image(s), numbered 1 to {len(image_filenames)}.
-The image filenames are: {image_filenames}
+    prompt = f"""You are deciding whether a user wants an image regenerated.
 
-User feedback: "{feedback}"
+User feedback for this image: "{feedback}"
 
-Your job: identify which image numbers the user wants regenerated.
-Be generous in your interpretation — if the user describes wanting a different image subject,
-style, or content (even implicitly), treat that as wanting to regenerate that image.
+Return "yes" if the user wants ANY visual change to this image.
+Return "no" if:
+- The input is empty
+- The user says they like it / it's fine / keep it / no change
+- The feedback is purely a compliment with no change request
 
-Examples of implicit image change requests:
-- "Instead of laptops I want a student holding one" → [1] (they want image 1 changed)
-- "The photo should show Paris streets instead" → [1]
-- "Make the second photo more dramatic" → [2]
-- "Change the image to show evening wear" → [1] (if only 1 image)
-- "Regenerate image 2 with bolder colors" → [2]
-
-Only return [] if the user EXPLICITLY says to keep images as they are,
-or if the feedback is purely about text with zero mention of visuals/photos/images.
-
-Respond ONLY with a JSON array of integers, e.g. [1] or [1, 3] or [].
-No explanation, no markdown, just the array."""
+Respond ONLY with "yes" or "no"."""
 
     resp = client.chat.completions.create(
         model="anthropic/claude-sonnet-4-5",
         messages=[{"role": "user", "content": prompt}],
     )
-    raw = resp.choices[0].message.content.strip()
-    try:
-        indices = json.loads(raw)
-        # Validate — only return valid 1-based indices
-        result = [i for i in indices if isinstance(i, int) and 1 <= i <= len(image_filenames)]
-        print(f"[parse_image_feedback] feedback='{feedback}' → indices={result}")
-        return result
-    except Exception:
-        print(f"[parse_image_feedback] Failed to parse: {raw}")
-        return []  # if parsing fails, assume text-only feedback
+    answer = resp.choices[0].message.content.strip().lower()
+    print(f"[should_regenerate_image] feedback='{feedback}' → {answer}")
+    return answer == "yes"
 
 
-
-def extract_image_style_from_feedback(feedback: str, image_index: int,
-                                       original_style: str) -> str:
+def extract_image_style_from_feedback(feedback: str, original_style: str) -> str:
     """
-    Extracts the new image style description from the user feedback for a specific image.
-    Falls back to original style if nothing specific is found.
+    Extracts a new DALL-E prompt from the user's image feedback.
+    Combines what the user wants changed with what should stay the same.
     """
     client = get_client()
     prompt = f"""You are extracting an image generation prompt from user feedback.
 
-The user wants to change image {image_index}.
 Original image style: "{original_style}"
 User feedback: "{feedback}"
 
-Extract a detailed image generation prompt for the NEW image the user wants.
-- Use the user's description as the main subject
-- Keep it suitable for DALL-E 3
+Write a detailed DALL-E 3 prompt for the NEW image.
+- Incorporate the user's requested changes
+- Keep elements from the original style that the user did not mention changing
 - Make it fashion-focused and visually compelling
-- If the user says "remove people", describe the scene without people
-- If the user says "add a student", describe a fashionable student
+- Be specific and descriptive
 
 Respond ONLY with the image generation prompt, no explanation, no quotes."""
 
@@ -183,12 +165,13 @@ Respond ONLY with the image generation prompt, no explanation, no quotes."""
         messages=[{"role": "user", "content": prompt}],
     )
     new_style = resp.choices[0].message.content.strip()
-    print(f"[extract_image_style] image {image_index}: '{original_style}' → '{new_style}'")
+    print(f"[extract_image_style] '{original_style}' → '{new_style}'")
     return new_style
 
-def build_fresh_prompt(title, article_query, trend_data, article_text,
-                       image_filenames, chat_history_text) -> str:
-    """Prompt for generating a brand new article from scratch."""
+
+def build_fresh_prompt(title: str, article_query: str, trend_data: str,
+                       article_text: str, image_filenames: list) -> str:
+    """Prompt for generating a brand new article HTML from scratch."""
     images_list = "\n".join(f"  - /output/{f}" for f in image_filenames)
     return f"""You are a fashion expert, editor, and web designer.
 Produce a COMPLETE, beautiful, standalone HTML page combining the article and ALL images.
@@ -211,15 +194,12 @@ DRAFT ARTICLE:
 
 ARTICLE TOPIC: {article_query}
 
-TREND DATA:
+FASHION TREND DATA (use as inspiration and grounding):
 {trend_data}
-
-PRIOR SESSIONS (for continuity):
-{chat_history_text}
 """
 
 
-def build_feedback_prompt(existing_html: str, feedback: str,
+def build_feedback_prompt(existing_html: str, text_feedback: str,
                           updated_image_map: dict) -> str:
     """
     Prompt for applying targeted feedback to an existing article.
@@ -227,21 +207,22 @@ def build_feedback_prompt(existing_html: str, feedback: str,
     """
     image_replacements = ""
     if updated_image_map:
-        image_replacements = "IMAGE REPLACEMENTS (update these src paths in the HTML):\n"
+        image_replacements = "IMAGE PATH REPLACEMENTS (update these src attributes):\n"
         for old, new in updated_image_map.items():
             image_replacements += f"  - Replace /output/{old} with /output/{new}\n"
 
+    text_section = ""
+    if text_feedback and text_feedback.strip():
+        text_section = f"TEXT CHANGES REQUESTED:\n{text_feedback}\n"
+
     return f"""You are a fashion editor making precise targeted edits to an existing HTML article.
 
-USER FEEDBACK:
-{feedback}
-
+{text_section}
 {image_replacements}
 
 RULES:
-• Apply ONLY the changes requested in the feedback
+• Apply ONLY the changes listed above
 • Keep ALL other text, styling, layout, and images exactly as they are
-• If image replacements are listed above, update ONLY those src paths
 • Return the COMPLETE updated HTML document
 • Return ONLY the raw HTML, no markdown fences, no explanation
 
@@ -251,7 +232,9 @@ EXISTING HTML TO EDIT:
 
 
 def validate_html(html: str, image_filenames: list) -> tuple[bool, list, str]:
+    """Validates generated HTML structure and image references."""
     errors = []
+    # Strip markdown fences if LLM wrapped output
     s = html.strip()
     if s.startswith("```"):
         lines = s.split("\n")[1:]
@@ -274,7 +257,30 @@ def validate_html(html: str, image_filenames: list) -> tuple[bool, list, str]:
     return (len(errors) == 0, errors, html)
 
 
+def fix_image_paths(html: str, image_filenames: list) -> str:
+    """
+    Corrects image src paths in LLM-generated HTML.
+    LLMs sometimes use wrong path variants — this normalises them all to /output/<filename>.
+    """
+    for filename in image_filenames:
+        wrong_variants = [
+            f'src="{filename}"',
+            f"src='{filename}'",
+            f'src="output/{filename}"',
+            f"src='output/{filename}'",
+            f'src="./output/{filename}"',
+            f"src='./output/{filename}'",
+            f'src="../output/{filename}"',
+            f"src='../output/{filename}'",
+        ]
+        correct = f'src="/output/{filename}"'
+        for wrong in wrong_variants:
+            html = html.replace(wrong, correct)
+    return html
+
+
 def emergency_fallback_html(title: str, article_text: str, image_filenames: list) -> str:
+    """Assembles a basic valid HTML page if all LLM retries fail."""
     imgs = "\n".join(
         f'<img src="/output/{f}" alt="Fashion image" style="max-width:100%;margin:1rem 0;">'
         for f in image_filenames
@@ -298,55 +304,25 @@ def emergency_fallback_html(title: str, article_text: str, image_filenames: list
 </html>"""
 
 
-
-def fix_image_paths(html: str, image_filenames: list) -> str:
-    """
-    Post-process the LLM HTML to ensure all image filenames
-    are correctly referenced as /output/<filename>.
-    The LLM sometimes uses just the filename or a wrong path.
-    """
-    for filename in image_filenames:
-        # Replace any of these wrong variants with the correct path
-        wrong_variants = [
-            f'src="{filename}"',
-            f"src='{filename}'",
-            f'src="output/{filename}"',
-            f"src='output/{filename}'",
-            f'src="./output/{filename}"',
-            f"src='./output/{filename}'",
-            f'src="../output/{filename}"',
-            f"src='../output/{filename}'",
-        ]
-        correct = f'src="/output/{filename}"'
-        for wrong in wrong_variants:
-            html = html.replace(wrong, correct)
-    return html
-
 # ── Fresh Pipeline ─────────────────────────────────────────────────────────────
 
 def run_pipeline(title: str, image_styles: list, article_query: str,
                  progress_callback=None):
-    """Full generation pipeline — generates everything from scratch."""
+    """
+    Full generation pipeline — generates everything from scratch.
+    Uses only the fashion dataset as grounding, no prior session history.
+    """
     def emit(step, total, msg):
         if progress_callback:
             progress_callback(step, total, msg)
         print(f"[{step}/{total}] {msg}")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    total = 2 + len(image_styles) + 2
+    total = 1 + len(image_styles) + 2  # trend data + images + article + html
 
     step = 1
     emit(step, total, "Fetching fashion trend data…")
-    trend_data = get_fashion_inspiration()
-
-    step += 1
-    emit(step, total, "Loading prior session history…")
-    prior_articles = load_history("articles")
-    prior_text     = load_history("text")
-    chat_history_text = "\n".join(
-        f"[{e['timestamp']}] {e.get('title','?')}: {e.get('article_preview','')}"
-        for e in (prior_articles + prior_text)[-5:]
-    ) or "No prior sessions."
+    trend_data = FASHION_DATA
 
     image_filenames = []
     for i, style in enumerate(image_styles, 1):
@@ -365,8 +341,7 @@ def run_pipeline(title: str, image_styles: list, article_query: str,
     step += 1
     emit(step, total, "Assembling final HTML page…")
     prompt = build_fresh_prompt(title, article_query, trend_data,
-                                article_text, image_filenames, chat_history_text)
-
+                                article_text, image_filenames)
     client = get_client()
     MAX_RETRIES = 3
     final_html = ""
@@ -405,7 +380,6 @@ def run_pipeline(title: str, image_styles: list, article_query: str,
 
     emit(step, total, f"✅ Done! Article saved as {html_filename}")
     return {
-        "html": final_html,
         "html_filename": html_filename,
         "image_filenames": image_filenames,
         "article_text": article_text,
@@ -414,12 +388,15 @@ def run_pipeline(title: str, image_styles: list, article_query: str,
 
 # ── Feedback Pipeline ──────────────────────────────────────────────────────────
 
-def run_feedback_pipeline(feedback: str, current_filename: str,
-                          current_image_filenames: list, title: str,
-                          image_styles: list, progress_callback=None):
+def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
+                          current_filename: str, current_image_filenames: list,
+                          title: str, image_styles: list,
+                          progress_callback=None):
     """
-    Feedback pipeline — applies targeted edits to existing article.
-    Only regenerates images explicitly mentioned in feedback.
+    Feedback pipeline — applies targeted edits to an existing article.
+    image_feedbacks: {1: "feedback for image 1", 2: "feedback for image 2", ...}
+    text_feedback: free text for article text changes.
+    Only regenerates images where feedback requests a change.
     """
     def emit(step, total, msg):
         if progress_callback:
@@ -427,46 +404,42 @@ def run_feedback_pipeline(feedback: str, current_filename: str,
         print(f"[{step}/{total}] {msg}")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    total = 2 + len(image_feedbacks) + 1  # load + images + apply feedback
 
-    # Step 1 — Parse which images need regenerating
-    total = 4  # parse + load + (optional images) + apply feedback
     step = 1
-    emit(step, total, "Analysing feedback…")
-    indices_to_regenerate = parse_image_feedback(feedback, current_image_filenames)
-
-    # Step 2 — Load existing HTML
-    step += 1
     emit(step, total, "Loading existing article…")
     html_path = os.path.join(OUTPUT_DIR, current_filename)
     with open(html_path, encoding="utf-8") as f:
         existing_html = f.read()
 
-    # Step 3 — Regenerate only the requested images
-    updated_image_map = {}  # {old_filename: new_filename}
+    # Regenerate only images where user actually requested a change
+    updated_image_map = {}
     final_image_filenames = list(current_image_filenames)
 
-    if indices_to_regenerate:
-        total += len(indices_to_regenerate)
-        for idx in indices_to_regenerate:
-            step += 1
-            original_style = image_styles[idx - 1] if idx <= len(image_styles) else f"image {idx}"
-            emit(step, total, f"Extracting new style for image {idx}…")
-            new_style = extract_image_style_from_feedback(feedback, idx, original_style)
-            emit(step, total, f"Regenerating image {idx}: {new_style[:40]}…")
-            try:
-                old_filename = current_image_filenames[idx - 1]
-                new_filename = generate_image(title, new_style)
-                updated_image_map[old_filename] = new_filename
-                final_image_filenames[idx - 1] = new_filename
-            except Exception as e:
-                emit(step, total, f"⚠️ Image {idx} regeneration failed: {e}")
-    else:
-        emit(step, total, "No images to regenerate — text-only edit…")
+    for idx, img_feedback in image_feedbacks.items():
+        step += 1
+        idx = int(idx)
+        emit(step, total, f"Checking image {idx} feedback…")
 
-    # Step 4 — Apply feedback to HTML via LLM
+        if not should_regenerate_image(img_feedback):
+            emit(step, total, f"↩ Image {idx} — no change requested, keeping original.")
+            continue
+
+        original_style = image_styles[idx - 1] if idx <= len(image_styles) else f"image {idx}"
+        new_style = extract_image_style_from_feedback(img_feedback, original_style)
+        emit(step, total, f"Regenerating image {idx}: {new_style[:50]}…")
+        try:
+            old_filename = current_image_filenames[idx - 1]
+            new_filename = generate_image(title, new_style)
+            updated_image_map[old_filename] = new_filename
+            final_image_filenames[idx - 1] = new_filename
+        except Exception as e:
+            emit(step, total, f"⚠️ Image {idx} regeneration failed: {e}")
+
+    # Apply text feedback + image replacements to existing HTML
     step += 1
     emit(step, total, "Applying feedback to article…")
-    prompt = build_feedback_prompt(existing_html, feedback, updated_image_map)
+    prompt = build_feedback_prompt(existing_html, text_feedback, updated_image_map)
 
     client = get_client()
     MAX_RETRIES = 3
@@ -487,9 +460,8 @@ def run_feedback_pipeline(feedback: str, current_filename: str,
         emit(step, total, f"⚠️ Validation failed ({', '.join(errors)}), retrying…")
     else:
         emit(step, total, "🚨 Max retries reached — keeping original article.")
-        final_html = existing_html  # fallback: return original unchanged
+        final_html = existing_html
 
-    # Save updated article
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     html_filename = f"article_{ts}_revised.html"
     with open(os.path.join(OUTPUT_DIR, html_filename), "w") as f:
@@ -497,17 +469,16 @@ def run_feedback_pipeline(feedback: str, current_filename: str,
 
     save_history("articles", {
         "title": title,
-        "article_query": f"[FEEDBACK] {feedback}",
+        "article_query": f"[FEEDBACK] {text_feedback}",
         "image_styles": image_styles,
         "html_filename": html_filename,
         "image_filenames": final_image_filenames,
-        "article_preview": feedback[:300],
+        "article_preview": text_feedback[:300],
         "revised_from": current_filename,
     })
 
     emit(step, total, f"✅ Feedback applied! Saved as {html_filename}")
     return {
-        "html": final_html,
         "html_filename": html_filename,
         "image_filenames": final_image_filenames,
     }
@@ -516,7 +487,7 @@ def run_feedback_pipeline(feedback: str, current_filename: str,
 # ── SSE Stream Helper ──────────────────────────────────────────────────────────
 
 def stream_pipeline(pipeline_fn):
-    """Generic SSE streamer — runs any pipeline function in a thread and streams progress."""
+    """Generic SSE streamer — runs pipeline in background thread, streams progress to browser."""
     q = queue.Queue()
 
     def cb(step, total, message):
@@ -533,7 +504,7 @@ def stream_pipeline(pipeline_fn):
         except Exception as ex:
             q.put(json.dumps({"type": "error", "message": str(ex)}))
         finally:
-            q.put(None)
+            q.put(None)  # sentinel — tells stream to stop
 
     thread = threading.Thread(target=run, daemon=True)
     thread.start()
@@ -573,15 +544,16 @@ def generate():
 
 @app.route("/feedback", methods=["POST"])
 def feedback():
-    data                   = request.json
-    feedback_text          = data.get("feedback", "").strip()
-    current_filename       = data.get("current_filename", "").strip()
+    data                    = request.json
+    text_feedback           = data.get("text_feedback", "").strip()
+    image_feedbacks         = data.get("image_feedbacks", {})   # {index: feedback_text}
+    current_filename        = data.get("current_filename", "").strip()
     current_image_filenames = data.get("current_image_filenames", [])
-    title                  = data.get("title", "").strip()
-    image_styles           = data.get("image_styles", [])
+    title                   = data.get("title", "").strip()
+    image_styles            = data.get("image_styles", [])
 
-    if not feedback_text or not current_filename:
-        return jsonify({"error": "Feedback and current article filename are required."}), 400
+    if not current_filename:
+        return jsonify({"error": "Current article filename is required."}), 400
 
     html_path = os.path.join(OUTPUT_DIR, current_filename)
     if not os.path.exists(html_path):
@@ -589,23 +561,26 @@ def feedback():
 
     return stream_pipeline(
         lambda cb: run_feedback_pipeline(
-            feedback_text, current_filename, current_image_filenames,
-            title, image_styles, progress_callback=cb
+            text_feedback, image_feedbacks, current_filename,
+            current_image_filenames, title, image_styles,
+            progress_callback=cb
         )
     )
 
 
-
 @app.route("/article-html/<filename>")
 def article_html_raw(filename):
+    """Returns raw HTML for iframe rendering — bypasses template to avoid path issues."""
     html_path = os.path.join(OUTPUT_DIR, filename)
     if not os.path.exists(html_path):
         return "Article not found", 404
     with open(html_path, encoding="utf-8") as f:
         return f.read(), 200, {"Content-Type": "text/html"}
 
+
 @app.route("/article/<filename>")
 def view_article(filename):
+    """Renders article in article.html template wrapper."""
     html_path = os.path.join(OUTPUT_DIR, filename)
     if not os.path.exists(html_path):
         return render_template("error.html",
@@ -618,6 +593,7 @@ def view_article(filename):
 
 @app.route("/delete", methods=["POST"])
 def delete_history():
+    """Deletes all history JSON files."""
     deleted = []
     for kind in ["articles", "images", "text"]:
         path = os.path.join(HISTORY_DIR, f"{kind}.json")
@@ -629,6 +605,7 @@ def delete_history():
 
 @app.route("/history/<kind>")
 def get_history(kind):
+    """Returns history JSON for the UI history panel."""
     if kind not in ("articles", "images", "text"):
         return jsonify({"error": "Invalid history type"}), 400
     return jsonify(load_history(kind))
@@ -636,6 +613,7 @@ def get_history(kind):
 
 @app.route("/output/<path:filename>")
 def serve_output(filename):
+    """Serves generated files (images and HTML) to the browser."""
     return send_from_directory(OUTPUT_DIR, filename)
 
 
