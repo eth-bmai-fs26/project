@@ -16,8 +16,7 @@ Run the setup
 
 This script is made to be run in a powershell terminal.
 Make the script executable.
-`Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   .\setup.ps1`
+`Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
 
 Run the setup
 `.\setup.ps1`
