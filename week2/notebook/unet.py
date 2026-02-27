@@ -16,7 +16,7 @@ class SimpleUNet(nn.Module):
     
     note: output channels are always the same as input channels, since we're predicting noise which has the same shape as the input image.
     """
-    def __init__(self, base_ch=64, emb_dim=64, num_classes=10, in_channels=1):
+    def __init__(self, base_ch=128, emb_dim=64, num_classes=10, in_channels=1):
         super().__init__()
         self.in_ch = in_channels
         self.out_ch = in_channels
@@ -33,19 +33,23 @@ class SimpleUNet(nn.Module):
         )
 
         # Encoder
-        self.enc1 = ConvBlock(self.in_ch, base_ch, emb_dim)     
-        self.down1 = nn.Conv2d(base_ch, base_ch, 4, stride=2, padding=1)    
-        self.enc2 = ConvBlock(base_ch, base_ch * 2, emb_dim)   
-        self.down2 = nn.Conv2d(base_ch * 2, base_ch * 2, 4, stride=2, padding=1)    
+        self.enc1 = ConvBlock(self.in_ch, base_ch, emb_dim)
+        self.down1 = nn.Conv2d(base_ch, base_ch, 4, stride=2, padding=1)
+        self.enc2 = ConvBlock(base_ch, base_ch * 2, emb_dim)
+        self.down2 = nn.Conv2d(base_ch * 2, base_ch * 2, 4, stride=2, padding=1)
+        self.enc3 = ConvBlock(base_ch * 2, base_ch * 4, emb_dim)
+        self.down3 = nn.Conv2d(base_ch * 4, base_ch * 4, 4, stride=2, padding=1)
 
         # Bottleneck
-        self.bot = ConvBlock(base_ch * 2, base_ch * 2, emb_dim)    
+        self.bot = ConvBlock(base_ch * 4, base_ch * 4, emb_dim)
 
         # Decoder
-        self.up1 = nn.ConvTranspose2d(base_ch * 2, base_ch * 2, 4, stride=2, padding=1)     
-        self.dec1 = ConvBlock(base_ch * 2 + base_ch * 2, base_ch, emb_dim)     
-        self.up2 = nn.ConvTranspose2d(base_ch, base_ch, 4, stride=2, padding=1)         
-        self.dec2 = ConvBlock(base_ch + base_ch, base_ch, emb_dim)     
+        self.up3 = nn.ConvTranspose2d(base_ch * 4, base_ch * 4, 4, stride=2, padding=1)
+        self.dec3 = ConvBlock(base_ch * 4 + base_ch * 4, base_ch * 2, emb_dim)
+        self.up2 = nn.ConvTranspose2d(base_ch * 2, base_ch * 2, 4, stride=2, padding=1)
+        self.dec2 = ConvBlock(base_ch * 2 + base_ch * 2, base_ch, emb_dim)
+        self.up1 = nn.ConvTranspose2d(base_ch, base_ch, 4, stride=2, padding=1)
+        self.dec1 = ConvBlock(base_ch + base_ch, base_ch, emb_dim)
 
         self.out = nn.Conv2d(base_ch, self.out_ch, 1)    
 
@@ -62,23 +66,28 @@ class SimpleUNet(nn.Module):
         cond_emb = self.cond_mlp(time_emb + label_emb)
         
         # encoder
-        e1 = self.enc1(x, cond_emb)                
-        d1 = self.down1(e1)                     
-        e2 = self.enc2(d1, cond_emb)               
-        d2 = self.down2(e2)                     
+        e1 = self.enc1(x, cond_emb)            # (B, base_ch,  32, 32)
+        d1 = self.down1(e1)                    # (B, base_ch,  16, 16)
+        e2 = self.enc2(d1, cond_emb)           # (B, base_ch * 2, 16, 16)
+        d2 = self.down2(e2)                    # (B, base_ch * 2,  8,  8)
+        e3 = self.enc3(d2, cond_emb)           # (B, base_ch * 4,  8,  8)
+        d3 = self.down3(e3)                    # (B, base_ch * 4,  4,  4)
 
         # bottleneck
-        b = self.bot(d2, cond_emb)
+        b = self.bot(d3, cond_emb)             # (B, base_ch * 4,  4,  4)
 
         # decoder
-        u1 = self.up1(b)                        
-        u1 = torch.cat([u1, e2], dim=1)         
-        u1 = self.dec1(u1, cond_emb)               
-        u2 = self.up2(u1)                       
-        u2 = torch.cat([u2, e1], dim=1)         
-        u2 = self.dec2(u2, cond_emb)               
+        u3 = self.up3(b)                       # (B, base_ch * 4,  8,  8)
+        u3 = torch.cat([u3, e3], dim=1)        # (B, base_ch * 8,  8,  8)
+        u3 = self.dec3(u3, cond_emb)           # (B, base_ch * 2,  8,  8)
+        u2 = self.up2(u3)                      # (B, base_ch * 2, 16, 16)
+        u2 = torch.cat([u2, e2], dim=1)        # (B, base_ch * 4, 16, 16)
+        u2 = self.dec2(u2, cond_emb)           # (B, base_ch, 16, 16)
+        u1 = self.up1(u2)                      # (B, base_ch, 32, 32)
+        u1 = torch.cat([u1, e1], dim=1)        # (B, base_ch * 2, 32, 32)
+        u1 = self.dec1(u1, cond_emb)           # (B, base_ch, 32, 32)
 
-        return self.out(u2)
+        return self.out(u1)                    # (B,   C, 32, 32)
 
 class ConvBlock(nn.Module):
     """

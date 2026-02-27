@@ -24,7 +24,9 @@ def show_class_examples(dataset, class_names):
 
     fig, axes = plt.subplots(1, num_classes, figsize=(15, 1.8))
     for cls_idx, ax in enumerate(axes):
-        arr, cmap = _to_hwc(class_images[cls_idx])
+        img = (class_images[cls_idx] + 1) / 2
+        img = img.clamp(0, 1)
+        arr, cmap = _to_hwc(img)
         ax.imshow(arr, cmap=cmap)
         ax.set_title(class_names[cls_idx], fontsize=8)
         ax.axis("off")
