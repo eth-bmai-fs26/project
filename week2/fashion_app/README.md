@@ -9,22 +9,45 @@ OPENAI_API_KEY=your_litellm_key_here
 ```
 
 ### 2. Create virtual environment & install dependencies
+We have provided you with two scripts one ending in ".sh" for macOS and one ending in ".ps1" for Windows. These scripts ensure you have python installed and create a virtual enviorment with all the necesarry libraries installed.
 
 **macOS:**
+Make the script executable.
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+chmod +x setup.sh
+```
+
+Run the setup
+```bash
+./setup.sh
 ```
 
 **Windows:**
-```cmd
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
+This script is made to be run in a powershell terminal.
+Make the script executable.
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+Run the setup
+```powershell
+.\setup.ps1
 ```
 
-### 3. Run the app
+### 3. Activate virtual environment
+
+**macOS:**
+```bash
+source venv/bin/activate
+```
+
+**Windows:**
+```powershell
+.\venv\Scripts\activate
+```
+
+You can tell that your terminal is in the virtual environment by seeing a "(venv)" in front of the current file in the terminal. It is essential to have your virtual environment active otherwise the app will not be able to find the necessary libraries. 
+
+### 4. Run the app
 ```bash
 python3 app.py     # macOS
 python app.py      # Windows
