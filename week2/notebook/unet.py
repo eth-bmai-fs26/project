@@ -77,17 +77,18 @@ class SimpleUNet(nn.Module):
         b = self.bot(d3, cond_emb)             # (B, base_ch * 4,  4,  4)
 
         # decoder
-        u3 = self.up3(b)                       # (B, base_ch * 4,  8,  8)
-        u3 = torch.cat([u3, e3], dim=1)        # (B, base_ch * 8,  8,  8)
-        u3 = self.dec3(u3, cond_emb)           # (B, base_ch * 2,  8,  8)
-        u2 = self.up2(u3)                      # (B, base_ch * 2, 16, 16)
-        u2 = torch.cat([u2, e2], dim=1)        # (B, base_ch * 4, 16, 16)
-        u2 = self.dec2(u2, cond_emb)           # (B, base_ch, 16, 16)
-        u1 = self.up1(u2)                      # (B, base_ch, 32, 32)
-        u1 = torch.cat([u1, e1], dim=1)        # (B, base_ch * 2, 32, 32)
-        u1 = self.dec1(u1, cond_emb)           # (B, base_ch, 32, 32)
+        u3 = self.up3(b)                                               # (B, base_ch * 4,  ~8,  ~8)
+        u3 = F.interpolate(u3, size=e3.shape[2:], mode='nearest')     # align to e3's spatial size
+        u3 = torch.cat([u3, e3], dim=1)                               # (B, base_ch * 8,   8,   8)
+        u3 = self.dec3(u3, cond_emb)                                  # (B, base_ch * 2,   8,   8)
+        u2 = self.up2(u3)                                             # (B, base_ch * 2,  16,  16)
+        u2 = torch.cat([u2, e2], dim=1)                               # (B, base_ch * 4,  16,  16)
+        u2 = self.dec2(u2, cond_emb)                                  # (B, base_ch,      16,  16)
+        u1 = self.up1(u2)                                             # (B, base_ch,      32,  32)
+        u1 = torch.cat([u1, e1], dim=1)                               # (B, base_ch * 2,  32,  32)
+        u1 = self.dec1(u1, cond_emb)                                  # (B, base_ch,      32,  32)
 
-        return self.out(u1)                    # (B,   C, 32, 32)
+        return self.out(u1)                                           # (B,   C,          32,  32)
 
 class ConvBlock(nn.Module):
     """
