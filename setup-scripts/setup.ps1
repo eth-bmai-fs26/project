@@ -61,7 +61,7 @@ if(-not (Test-Path "requirements.txt")) {
 } else {
     Write-Host "Creating virtual enviorment...";
     python3 -m venv venv
-    source venv/bin/activate    
+    ./venv/Scripts/activate    
     Write-Host "Downloading libraries...";
     pip install -r requirements.txt
     deactivate
