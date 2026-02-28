@@ -450,12 +450,12 @@
     return new TextDecoder('utf-8').decode(arr);
   }
 
-  // Show HTML in iframe via data URI — more reliable than doc.write() in Colab's sandbox
+  // Show HTML in iframe via srcdoc — works inside Colab's sandboxed output
   function showPreviewFromB64(htmlB64) {
     document.getElementById('empty-state').style.display = 'none';
     var iframe = document.getElementById('preview-iframe');
     iframe.style.display = 'block';
-    iframe.src = 'data:text/html;base64,' + htmlB64;
+    iframe.srcdoc = decodeHtml(htmlB64);
   }
 
   // ── Generate ────────────────────────────────────────────────────────────────
