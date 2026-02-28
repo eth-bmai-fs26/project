@@ -82,8 +82,10 @@ def generate_image(title: str, style: str) -> str:
     """
     Generates one image using the trained DDPM model.
     Returns base64-encoded PNG string (app.py returns a filename).
+    style can be a digit "0"-"9" (direct class label from the UI dropdown)
+    or a text string (class label derived via hash).
     """
-    class_label = abs(hash(style)) % 10
+    class_label = int(style.strip()) % 10 if style.strip().isdigit() else abs(hash(style)) % 10
     b64 = _state["generate_fn"](class_label=class_label)
     save_history("images", {"title": title, "style": style})
     return b64

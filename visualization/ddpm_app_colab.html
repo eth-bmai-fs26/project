@@ -71,6 +71,14 @@
     color: var(--ink-mute); display: block; margin-bottom: 0.35rem; font-weight: 500;
   }
 
+  select.class-select {
+    width: 100%; background: var(--cream); border: 1px solid var(--border);
+    color: var(--ink); padding: 0.6rem 0.8rem; border-radius: 4px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+    transition: border-color 0.2s; cursor: pointer;
+  }
+  select.class-select:focus { outline: none; border-color: var(--gold); background: var(--white); }
+
   input[type=text], input[type=password], textarea {
     width: 100%; background: var(--cream); border: 1px solid var(--border);
     color: var(--ink); padding: 0.6rem 0.8rem; border-radius: 4px;
@@ -237,26 +245,31 @@
 
   <div id="sidebar-body">
 
-    <!-- API Key — asked once, used for all LLM calls -->
-    <div>
-      <label>API Key</label>
-      <input type="password" id="inp-apikey" placeholder="Paste your LiteLLM / OpenAI key…">
-    </div>
-
     <div>
       <label>Article Title</label>
       <input type="text" id="inp-title" placeholder="e.g. Spring Trends 2025">
     </div>
 
     <div>
-      <label>Image Styles</label>
+      <label>Images — select clothing category for each</label>
       <div id="styles-list">
         <div class="style-row">
-          <input type="text" placeholder="e.g. editorial high fashion, studio lighting">
+          <select class="class-select">
+            <option value="0">0 · T-shirt / top</option>
+            <option value="1">1 · Trouser</option>
+            <option value="2">2 · Pullover</option>
+            <option value="3" selected>3 · Dress</option>
+            <option value="4">4 · Coat</option>
+            <option value="5">5 · Sandal</option>
+            <option value="6">6 · Shirt</option>
+            <option value="7">7 · Sneaker</option>
+            <option value="8">8 · Bag</option>
+            <option value="9">9 · Ankle boot</option>
+          </select>
           <button class="btn-remove" onclick="removeStyle(this)">×</button>
         </div>
       </div>
-      <button id="btn-add-style" onclick="addStyle()">+ Add image style</button>
+      <button id="btn-add-style" onclick="addStyle()">+ Add image</button>
     </div>
 
     <div>
@@ -313,11 +326,20 @@
   var currentImageStyles = [];
 
   // ── Style rows ─────────────────────────────────────────────────────────────
+  var CLASS_OPTIONS = [
+    '0 · T-shirt / top','1 · Trouser','2 · Pullover','3 · Dress','4 · Coat',
+    '5 · Sandal','6 · Shirt','7 · Sneaker','8 · Bag','9 · Ankle boot'
+  ];
+
   function addStyle() {
     var list = document.getElementById('styles-list');
-    var row  = document.createElement('div');
+    var opts = CLASS_OPTIONS.map(function(label, i) {
+      return '<option value="' + i + '">' + label + '</option>';
+    }).join('');
+    var row = document.createElement('div');
     row.className = 'style-row';
-    row.innerHTML = '<input type="text" placeholder="Describe image style…"><button class="btn-remove" onclick="removeStyle(this)">×</button>';
+    row.innerHTML = '<select class="class-select">' + opts + '</select>' +
+                    '<button class="btn-remove" onclick="removeStyle(this)">×</button>';
     list.appendChild(row);
   }
 
@@ -327,8 +349,8 @@
   }
 
   function getStyles() {
-    return Array.from(document.querySelectorAll('.style-row input'))
-      .map(function(i) { return i.value.trim(); }).filter(Boolean);
+    return Array.from(document.querySelectorAll('.class-select'))
+      .map(function(s) { return s.value; });
   }
 
   // ── Per-image feedback inputs ───────────────────────────────────────────────
@@ -440,11 +462,9 @@
   async function generate() {
     var title  = document.getElementById('inp-title').value.trim();
     var query  = document.getElementById('inp-query').value.trim();
-    var apiKey = document.getElementById('inp-apikey').value.trim();
     var styles = getStyles();
 
     if (!title || !query) { alert('Please fill in title and article description.'); return; }
-    if (!apiKey) { alert('Please enter your API key.'); return; }
 
     currentImageStyles = styles;
     clearProgress();
@@ -453,10 +473,9 @@
     addStep('Fetching fashion trend data…', 'active'); setBar(10);
 
     try {
-      // Fire the Python callback (non-blocking Promise)
       var promise = google.colab.kernel.invokeFunction(
         'colabGenerate',
-        [title, JSON.stringify(styles), query, apiKey],
+        [title, JSON.stringify(styles), query, ''],
         {}
       );
 
@@ -490,9 +509,6 @@
     var textFeedback   = document.getElementById('inp-text-feedback').value.trim();
     var imageFeedbacks = getImageFeedbacks();
     var title          = document.getElementById('inp-title').value.trim();
-    var apiKey         = document.getElementById('inp-apikey').value.trim();
-
-    if (!apiKey) { alert('Please enter your API key.'); return; }
 
     clearProgress();
     lockUI('feedback');
@@ -502,7 +518,7 @@
     try {
       var promise = google.colab.kernel.invokeFunction(
         'colabFeedback',
-        [textFeedback, JSON.stringify(imageFeedbacks), title, apiKey],
+        [textFeedback, JSON.stringify(imageFeedbacks), title, ''],
         {}
       );
 
