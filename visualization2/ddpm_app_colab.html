@@ -205,8 +205,9 @@
     flex: 1; overflow: hidden; background: var(--cream);
     display: flex; align-items: center; justify-content: center; position: relative;
   }
+  #preview-iframe { display: none; }
   #injected-preview {
-    width: 100%; height: 100%; border: none;
+    width: 100%; height: 100%; overflow-y: auto; padding: 0;
     position: absolute; inset: 0;
   }
 
@@ -320,6 +321,7 @@
       <h2>Your article will appear here</h2>
       <p>Fill in the form and press Generate<br>to create your fashion article.</p>
     </div>
+    <iframe id="preview-iframe"></iframe>
     <div id="loading-overlay">
       <div class="spinner"></div>
       <div id="loading-label">Starting…</div>
@@ -458,26 +460,25 @@
     return new TextDecoder('utf-8').decode(arr);
   }
 
-  // Display article in an iframe via Blob URL — images (data URIs) render correctly
+  // Inject article HTML directly into the right panel (no iframe)
   function showPreviewFromB64(htmlB64) {
     var html = decodeHtml(htmlB64);
-    var blob = new Blob([html], { type: 'text/html' });
-    var url  = URL.createObjectURL(blob);
+
+    // Extract <style> blocks and <body> content
+    var styles = (html.match(/<style[^>]*>[\s\S]*?<\/style>/gi) || []).join('\n');
+    var bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    var body = bodyMatch ? bodyMatch[1] : html;
 
     document.getElementById('empty-state').style.display = 'none';
 
-    // Revoke previous blob URL and remove old iframe
+    // Remove previous injected content
     var old = document.getElementById('injected-preview');
-    if (old) {
-      if (old._blobUrl) URL.revokeObjectURL(old._blobUrl);
-      old.remove();
-    }
+    if (old) old.remove();
 
-    var iframe = document.createElement('iframe');
-    iframe.id = 'injected-preview';
-    iframe._blobUrl = url;
-    iframe.src = url;
-    document.getElementById('preview-area').appendChild(iframe);
+    var container = document.createElement('div');
+    container.id = 'injected-preview';
+    container.innerHTML = styles + body;
+    document.getElementById('preview-area').appendChild(container);
   }
 
   // ── Generate ────────────────────────────────────────────────────────────────
