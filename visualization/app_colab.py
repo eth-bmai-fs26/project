@@ -453,10 +453,9 @@ def run_pipeline(title: str, image_styles: list, article_query: str,
 
 # ── Feedback Pipeline — same structure as app.py ──────────────────────────────
 
-def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
-                          current_state: dict, title: str,
+def run_feedback_pipeline(text_feedback: str, html_feedback: str, current_state: dict, title: str,
                           progress_callback=None):
-    """Feedback pipeline — same structure as app.py."""
+    """Feedback pipeline — text and/or HTML layout changes, images kept from previous generation."""
     def emit(step, total, msg):
         if progress_callback:
             progress_callback(step, total, msg)
@@ -465,31 +464,10 @@ def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
     images_b64   = list(current_state["images_b64"])
     image_styles = list(current_state["image_styles"])
 
-    total = 2 + len(image_feedbacks) + 1
+    total = 3
     step  = 1
 
-    emit(step, total, "Loading current article state…")
-
-    for idx_str, img_feedback in image_feedbacks.items():
-        step += 1
-        idx = int(idx_str)
-        emit(step, total, f"Checking image {idx} feedback…")
-
-        if not should_regenerate_image(img_feedback):
-            emit(step, total, f"↩ Image {idx} — no change requested, keeping original.")
-            continue
-
-        original_style = image_styles[idx - 1] if idx <= len(image_styles) else f"image {idx}"
-        new_style      = extract_image_style_from_feedback(img_feedback, original_style)
-        emit(step, total, f"Regenerating image {idx}…")
-        try:
-            images_b64[idx - 1]   = generate_image(title, new_style)
-            image_styles[idx - 1] = new_style
-        except Exception as e:
-            emit(step, total, f"⚠️ Image {idx} regeneration failed: {e}")
-
-    step += 1
-    emit(step, total, "Applying text feedback and rebuilding article…")
+    emit(step, total, "Applying text feedback…")
 
     if text_feedback and text_feedback.strip():
         article_text = get_client().chat.completions.create(
@@ -498,6 +476,8 @@ def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
         ).choices[0].message.content
 
     base_prompt = build_fresh_prompt(title, "fashion article", FASHION_DATA, article_text, images_b64)
+    if html_feedback and html_feedback.strip():
+        base_prompt += f"\n\nHTML LAYOUT/STYLE INSTRUCTIONS (apply to the visual design):\n{html_feedback}"
     client      = get_client()
 
     def gen_fn(attempt, previous_errors):
@@ -573,13 +553,12 @@ def register_all(generate_fn, api_key, html_url=None,
         })
         return json.dumps({"html_b64": result["html_b64"], "images_b64": result["images_b64"], "num_images": result["num_images"]})
 
-    def colabFeedback(text_feedback, image_feedbacks_json, title, api_key_override=""):
+    def colabFeedback(text_feedback, html_feedback, title, api_key_override=""):
         if api_key_override:
             _state["api_key"] = api_key_override
         if not _current_state:
             return json.dumps({"error": "No article generated yet."})
-        image_feedbacks = json.loads(image_feedbacks_json) if isinstance(image_feedbacks_json, str) else image_feedbacks_json
-        result = run_feedback_pipeline(text_feedback, image_feedbacks, _current_state, title)
+        result = run_feedback_pipeline(text_feedback, html_feedback, _current_state, title)
         _current_state.update({
             "article_text": result["article_text"],
             "images_b64":   result["images_b64"],

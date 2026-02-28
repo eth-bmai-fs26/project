@@ -291,12 +291,16 @@
     <!-- Feedback section — appears after first generation -->
     <div id="feedback-section">
 
-      <div id="image-feedbacks-container"></div>
-
       <div class="feedback-block">
         <div class="feedback-label">Article Text Changes</div>
         <textarea id="inp-text-feedback" rows="3"
-          placeholder="What would you like to change in the text? e.g. 'Change the second paragraph to focus on sustainability'"></textarea>
+          placeholder="e.g. 'Focus more on sustainability', 'Make the intro shorter'"></textarea>
+      </div>
+
+      <div class="feedback-block">
+        <div class="feedback-label">HTML Layout Changes</div>
+        <textarea id="inp-html-feedback" rows="3"
+          placeholder="e.g. 'Put images on the left', 'Use a two-column layout', 'Make the title bigger'"></textarea>
       </div>
 
       <button class="action-btn" id="btn-feedback" onclick="applyFeedback()">✏️ Apply Feedback</button>
@@ -359,30 +363,6 @@
   function getStyles() {
     return Array.from(document.querySelectorAll('.class-select'))
       .map(function(s) { return s.value; });
-  }
-
-  // ── Per-image feedback inputs ───────────────────────────────────────────────
-  function buildImageFeedbackInputs(numImages) {
-    var container = document.getElementById('image-feedbacks-container');
-    container.innerHTML = '';
-    for (var i = 1; i <= numImages; i++) {
-      var row = document.createElement('div');
-      row.className = 'image-feedback-row';
-      row.innerHTML =
-        '<div class="img-label">Image ' + i + ' Feedback</div>' +
-        '<textarea id="img-feedback-' + i + '" rows="2" ' +
-        'placeholder="Leave empty to keep, or describe what to change…"></textarea>';
-      container.appendChild(row);
-    }
-  }
-
-  function getImageFeedbacks() {
-    var result = {};
-    document.querySelectorAll('[id^="img-feedback-"]').forEach(function(el) {
-      var idx = el.id.replace('img-feedback-', '');
-      result[idx] = el.value.trim();
-    });
-    return result;
   }
 
   // ── Progress ────────────────────────────────────────────────────────────────
@@ -527,7 +507,7 @@
       currentImageStyles = styles;
 
       showPreview(data.html_b64, data.images_b64);
-      showFeedbackSection(data.num_images);
+      showFeedbackSection();
       loadHistory();
 
     } catch(err) {
@@ -539,37 +519,37 @@
 
   // ── Apply Feedback ──────────────────────────────────────────────────────────
   async function applyFeedback() {
-    var textFeedback   = document.getElementById('inp-text-feedback').value.trim();
-    var imageFeedbacks = getImageFeedbacks();
-    var title          = document.getElementById('inp-title').value.trim();
+    var textFeedback = document.getElementById('inp-text-feedback').value.trim();
+    var htmlFeedback = document.getElementById('inp-html-feedback').value.trim();
+    var title        = document.getElementById('inp-title').value.trim();
+
+    if (!textFeedback && !htmlFeedback) { alert('Please fill in at least one feedback field.'); return; }
 
     clearProgress();
     lockUI('feedback');
 
-    addStep('Checking feedback…', 'active'); setBar(10);
+    addStep('Applying feedback…', 'active'); setBar(10);
 
     try {
       var promise = google.colab.kernel.invokeFunction(
         'colabFeedback',
-        [textFeedback, JSON.stringify(imageFeedbacks), title, ''],
+        [textFeedback, htmlFeedback, title, ''],
         {}
       );
 
-      await sleep(600);  addStep('Regenerating DDPM images…',   'active'); setBar(40);
-      await sleep(1200); addStep('Applying text changes…',       'active'); setBar(70);
-      await sleep(600);  addStep('Rebuilding HTML page…',        'active'); setBar(85);
+      await sleep(1000); addStep('Rewriting article…',     'active'); setBar(50);
+      await sleep(800);  addStep('Rebuilding HTML page…',  'active'); setBar(80);
 
       var data = await callPython(promise);
 
       setBar(100);
-      addStep('✅ Done! Article updated below ↓', 'done');
+      addStep('✅ Done! Article updated.', 'done');
 
       showPreview(data.html_b64, data.images_b64);
       loadHistory();
 
-      // Clear feedback inputs
       document.getElementById('inp-text-feedback').value = '';
-      document.querySelectorAll('[id^="img-feedback-"]').forEach(function(el) { el.value = ''; });
+      document.getElementById('inp-html-feedback').value = '';
 
     } catch(err) {
       addStep('❌ ' + (err.message || String(err)), 'error');
@@ -580,8 +560,7 @@
 
   // ── Preview ─────────────────────────────────────────────────────────────────
 
-  function showFeedbackSection(numImages) {
-    buildImageFeedbackInputs(numImages);
+  function showFeedbackSection() {
     document.getElementById('feedback-section').classList.add('visible');
   }
 

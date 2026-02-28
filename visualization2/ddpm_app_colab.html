@@ -205,9 +205,8 @@
     flex: 1; overflow: hidden; background: var(--cream);
     display: flex; align-items: center; justify-content: center; position: relative;
   }
-  #preview-iframe { display: none; }
   #injected-preview {
-    width: 100%; height: 100%; overflow-y: auto; padding: 0;
+    width: 100%; height: 100%; border: none;
     position: absolute; inset: 0;
   }
 
@@ -321,7 +320,6 @@
       <h2>Your article will appear here</h2>
       <p>Fill in the form and press Generate<br>to create your fashion article.</p>
     </div>
-    <iframe id="preview-iframe"></iframe>
     <div id="loading-overlay">
       <div class="spinner"></div>
       <div id="loading-label">Starting…</div>
@@ -460,25 +458,37 @@
     return new TextDecoder('utf-8').decode(arr);
   }
 
-  // Inject article HTML directly into the right panel (no iframe)
-  function showPreviewFromB64(htmlB64) {
+  // Inject article into a Shadow DOM — styles isolated, images set directly via JS
+  function showPreview(htmlB64, imagesB64) {
     var html = decodeHtml(htmlB64);
 
-    // Extract <style> blocks and <body> content
+    // Extract <style> and <body> content
     var styles = (html.match(/<style[^>]*>[\s\S]*?<\/style>/gi) || []).join('\n');
     var bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
     var body = bodyMatch ? bodyMatch[1] : html;
 
     document.getElementById('empty-state').style.display = 'none';
 
-    // Remove previous injected content
     var old = document.getElementById('injected-preview');
     if (old) old.remove();
 
-    var container = document.createElement('div');
-    container.id = 'injected-preview';
-    container.innerHTML = styles + body;
-    document.getElementById('preview-area').appendChild(container);
+    // Shadow DOM isolates article CSS from the app
+    var host = document.createElement('div');
+    host.id = 'injected-preview';
+    var shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<style>:host{display:block;width:100%;height:100%;overflow-y:auto;padding:20px;box-sizing:border-box}</style>'
+                     + styles + body;
+
+    // Inject images directly into DOM elements — no data URI iframe issues
+    if (imagesB64 && imagesB64.length) {
+      imagesB64.forEach(function(b64, i) {
+        shadow.querySelectorAll('img[src="IMAGE_' + (i + 1) + '"]').forEach(function(img) {
+          img.src = 'data:image/png;base64,' + b64;
+        });
+      });
+    }
+
+    document.getElementById('preview-area').appendChild(host);
   }
 
   // ── Generate ────────────────────────────────────────────────────────────────
@@ -516,7 +526,7 @@
       currentNumImages   = data.num_images;
       currentImageStyles = styles;
 
-      showPreviewFromB64(data.html_b64);
+      showPreview(data.html_b64, data.images_b64);
       showFeedbackSection(data.num_images);
       loadHistory();
 
@@ -554,7 +564,7 @@
       setBar(100);
       addStep('✅ Done! Article updated below ↓', 'done');
 
-      showPreviewFromB64(data.html_b64);
+      showPreview(data.html_b64, data.images_b64);
       loadHistory();
 
       // Clear feedback inputs
