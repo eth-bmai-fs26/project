@@ -458,25 +458,18 @@
     return new TextDecoder('utf-8').decode(arr);
   }
 
-  // Display article in an iframe via Blob URL — images (data URIs) render correctly
+  // Display article in an iframe via srcdoc
   function showPreviewFromB64(htmlB64) {
     var html = decodeHtml(htmlB64);
-    var blob = new Blob([html], { type: 'text/html' });
-    var url  = URL.createObjectURL(blob);
 
     document.getElementById('empty-state').style.display = 'none';
 
-    // Revoke previous blob URL and remove old iframe
     var old = document.getElementById('injected-preview');
-    if (old) {
-      if (old._blobUrl) URL.revokeObjectURL(old._blobUrl);
-      old.remove();
-    }
+    if (old) old.remove();
 
     var iframe = document.createElement('iframe');
     iframe.id = 'injected-preview';
-    iframe._blobUrl = url;
-    iframe.src = url;
+    iframe.srcdoc = html;
     document.getElementById('preview-area').appendChild(iframe);
   }
 

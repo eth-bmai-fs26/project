@@ -165,20 +165,23 @@ Respond ONLY with the style description, no explanation, no quotes."""
 def build_fresh_prompt(title: str, article_query: str, trend_data: str,
                        article_text: str, images_b64: list) -> str:
     """Prompt for generating a brand new article HTML from scratch."""
-    img_list = "\n".join(f"  - IMAGE_{i+1}" for i in range(len(images_b64)))
+    img_tags = "\n".join(
+        f'  <img src="IMAGE_{i+1}" alt="fashion image {i+1}" style="max-width:100%;display:block;margin:1.5rem auto;">'
+        for i in range(len(images_b64))
+    )
     return f"""You are a fashion expert, editor, and web designer.
 Produce a COMPLETE, beautiful, standalone HTML page combining the article and ALL images.
 
 ARTICLE TITLE: {title}
 
-AVAILABLE IMAGES (use these EXACT strings as <img> src values):
-{img_list}
+CRITICAL — copy these EXACT <img> tags into your HTML, do NOT change the src attribute:
+{img_tags}
 
 RULES:
 \u2022 Return a COMPLETE HTML document (<!DOCTYPE html> \u2026 </html>)
 \u2022 Embedded CSS in a <style> tag \u2014 modern, elegant, magazine-like
 \u2022 Use "{title}" as <h1>
-\u2022 Place ALL image placeholders above exactly as shown (e.g. src="IMAGE_1")
+\u2022 The src of every image MUST be exactly IMAGE_1, IMAGE_2, etc. \u2014 nothing else
 \u2022 Responsive layout, no external CDN/fonts
 \u2022 Return ONLY the raw HTML, no markdown fences
 
@@ -252,8 +255,8 @@ def validate_html(html: str, num_images: int) -> tuple:
             errors.append(message)
 
     for i in range(1, num_images + 1):
-        if f"IMAGE_{i}" not in html:
-            errors.append(f"IMAGE_{i} placeholder not found in HTML")
+        if f'src="IMAGE_{i}"' not in html and f"src='IMAGE_{i}'" not in html:
+            errors.append(f'IMAGE_{i} not found as img src (must be src="IMAGE_{i}")')
 
     VOID_ELEMENTS = {"area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"}
     UNIQUE_TAGS   = {"html","head","body","title"}
