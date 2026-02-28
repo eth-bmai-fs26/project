@@ -26,8 +26,12 @@
     font-family: 'DM Sans', sans-serif;
     background: var(--cream);
     color: var(--ink);
+    margin: 0; padding: 0;
+  }
+
+  #app {
     display: flex;
-    height: 100vh;
+    height: 750px;
     overflow: hidden;
   }
 
@@ -196,7 +200,7 @@
   .history-entry span { color: var(--ink-mute); font-size: 0.68rem; }
 
   /* ── Main panel ── */
-  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
   #preview-area {
     flex: 1; overflow: hidden; background: var(--cream);
     display: flex; align-items: center; justify-content: center; position: relative;
@@ -240,6 +244,7 @@
 </style>
 </head>
 <body>
+<div id="app">
 
 <div id="sidebar">
   <div id="sidebar-header">
@@ -323,6 +328,7 @@
     </div>
   </div>
 </div>
+</div><!-- #app -->
 
 <script>
   // ── State ──────────────────────────────────────────────────────────────────
