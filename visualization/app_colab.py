@@ -433,8 +433,7 @@ def run_pipeline(title: str, image_styles: list, article_query: str,
     if not succeeded:
         raw_html = emergency_fallback_html(title, article_text, len(images_b64))
 
-    final_html = _embed_images(raw_html, images_b64)
-
+    # Do NOT embed images — JS will inject them directly into the DOM
     save_history("articles", {
         "title":           title,
         "article_query":   article_query,
@@ -444,7 +443,7 @@ def run_pipeline(title: str, image_styles: list, article_query: str,
 
     emit(step, total, "✅ Done!")
     return {
-        "html_b64":      _html_to_b64(final_html),
+        "html_b64":      _html_to_b64(raw_html),
         "article_text":  article_text,
         "images_b64":    images_b64,
         "image_styles":  image_styles,
@@ -517,8 +516,7 @@ def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
     if not succeeded:
         raw_html = emergency_fallback_html(title, article_text, len(images_b64))
 
-    final_html = _embed_images(raw_html, images_b64)
-
+    # Do NOT embed images — JS will inject them directly into the DOM
     save_history("articles", {
         "title":           f"[FEEDBACK] {title}",
         "article_query":   f"[FEEDBACK] {text_feedback}",
@@ -528,7 +526,7 @@ def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
 
     emit(step, total, "✅ Feedback applied!")
     return {
-        "html_b64":     _html_to_b64(final_html),
+        "html_b64":     _html_to_b64(raw_html),
         "article_text": article_text,
         "images_b64":   images_b64,
         "image_styles": image_styles,
@@ -573,7 +571,7 @@ def register_all(generate_fn, api_key, html_url=None,
             "images_b64":   result["images_b64"],
             "image_styles": result["image_styles"],
         })
-        return json.dumps({"html_b64": result["html_b64"], "num_images": result["num_images"]})
+        return json.dumps({"html_b64": result["html_b64"], "images_b64": result["images_b64"], "num_images": result["num_images"]})
 
     def colabFeedback(text_feedback, image_feedbacks_json, title, api_key_override=""):
         if api_key_override:
@@ -587,7 +585,7 @@ def register_all(generate_fn, api_key, html_url=None,
             "images_b64":   result["images_b64"],
             "image_styles": result["image_styles"],
         })
-        return json.dumps({"html_b64": result["html_b64"], "num_images": result["num_images"]})
+        return json.dumps({"html_b64": result["html_b64"], "images_b64": result["images_b64"], "num_images": result["num_images"]})
 
     def colabGetHistory():
         return json.dumps(load_history("articles")[-10:])
