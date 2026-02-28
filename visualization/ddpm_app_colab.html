@@ -201,7 +201,11 @@
     flex: 1; overflow: hidden; background: var(--cream);
     display: flex; align-items: center; justify-content: center; position: relative;
   }
-  #preview-iframe { width: 100%; height: 100%; border: none; display: none; }
+  #preview-iframe { display: none; }
+  #injected-preview {
+    width: 100%; height: 100%; overflow-y: auto; padding: 0;
+    position: absolute; inset: 0;
+  }
 
   #empty-state { text-align: center; color: var(--ink-mute); }
   #empty-state .symbol {
@@ -450,12 +454,25 @@
     return new TextDecoder('utf-8').decode(arr);
   }
 
-  // Show HTML in iframe via srcdoc — works inside Colab's sandboxed output
+  // Inject article HTML directly into the right panel (no iframe)
   function showPreviewFromB64(htmlB64) {
+    var html = decodeHtml(htmlB64);
+
+    // Extract <style> blocks and <body> content
+    var styles = (html.match(/<style[^>]*>[\s\S]*?<\/style>/gi) || []).join('\n');
+    var bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    var body = bodyMatch ? bodyMatch[1] : html;
+
     document.getElementById('empty-state').style.display = 'none';
-    var iframe = document.getElementById('preview-iframe');
-    iframe.style.display = 'block';
-    iframe.srcdoc = decodeHtml(htmlB64);
+
+    // Remove previous injected content
+    var old = document.getElementById('injected-preview');
+    if (old) old.remove();
+
+    var container = document.createElement('div');
+    container.id = 'injected-preview';
+    container.innerHTML = styles + body;
+    document.getElementById('preview-area').appendChild(container);
   }
 
   // ── Generate ────────────────────────────────────────────────────────────────
@@ -493,6 +510,7 @@
       currentNumImages   = data.num_images;
       currentImageStyles = styles;
 
+      showPreviewFromB64(data.html_b64);
       showFeedbackSection(data.num_images);
       loadHistory();
 
@@ -530,6 +548,7 @@
       setBar(100);
       addStep('✅ Done! Article updated below ↓', 'done');
 
+      showPreviewFromB64(data.html_b64);
       loadHistory();
 
       // Clear feedback inputs
