@@ -428,6 +428,14 @@
     return new TextDecoder('utf-8').decode(arr);
   }
 
+  // Show HTML in iframe via data URI — more reliable than doc.write() in Colab's sandbox
+  function showPreviewFromB64(htmlB64) {
+    document.getElementById('empty-state').style.display = 'none';
+    var iframe = document.getElementById('preview-iframe');
+    iframe.style.display = 'block';
+    iframe.src = 'data:text/html;base64,' + htmlB64;
+  }
+
   // ── Generate ────────────────────────────────────────────────────────────────
   async function generate() {
     var title  = document.getElementById('inp-title').value.trim();
@@ -522,14 +530,6 @@
   }
 
   // ── Preview ─────────────────────────────────────────────────────────────────
-  function showPreviewFromB64(htmlB64) {
-    var html = decodeHtml(htmlB64);
-    document.getElementById('empty-state').style.display = 'none';
-    var iframe = document.getElementById('preview-iframe');
-    iframe.style.display = 'block';
-    var doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open(); doc.write(html); doc.close();
-  }
 
   function showFeedbackSection(numImages) {
     buildImageFeedbackInputs(numImages);
