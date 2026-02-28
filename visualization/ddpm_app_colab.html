@@ -488,12 +488,11 @@
       var data = await callPython(promise);
 
       setBar(100);
-      addStep('✅ Done!', 'done');
+      addStep('✅ Done! Article displayed below ↓', 'done');
 
       currentNumImages   = data.num_images;
       currentImageStyles = styles;
 
-      showPreviewFromB64(data.html_b64);
       showFeedbackSection(data.num_images);
       loadHistory();
 
@@ -529,9 +528,8 @@
       var data = await callPython(promise);
 
       setBar(100);
-      addStep('✅ Done!', 'done');
+      addStep('✅ Done! Article updated below ↓', 'done');
 
-      showPreviewFromB64(data.html_b64);
       loadHistory();
 
       // Clear feedback inputs

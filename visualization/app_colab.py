@@ -551,7 +551,7 @@ def register_all(generate_fn, api_key, html_url=None,
         store.clear()
 
     from google.colab import output
-    import IPython
+    import IPython.display
 
     _current_state = {}
 
@@ -570,6 +570,9 @@ def register_all(generate_fn, api_key, html_url=None,
             "images_b64":   result["images_b64"],
             "image_styles": result["image_styles"],
         })
+        # Display the article directly in Colab output (below the app)
+        html = base64.b64decode(result["html_b64"]).decode("utf-8")
+        IPython.display.display(IPython.display.HTML(html))
         return json.dumps({"html_b64": result["html_b64"], "num_images": result["num_images"]})
 
     def colabFeedback(text_feedback, image_feedbacks_json, title, api_key_override=""):
@@ -584,6 +587,8 @@ def register_all(generate_fn, api_key, html_url=None,
             "images_b64":   result["images_b64"],
             "image_styles": result["image_styles"],
         })
+        html = base64.b64decode(result["html_b64"]).decode("utf-8")
+        IPython.display.display(IPython.display.HTML(html))
         return json.dumps({"html_b64": result["html_b64"], "num_images": result["num_images"]})
 
     def colabGetHistory():
