@@ -558,8 +558,6 @@ def register_all(generate_fn, api_key, html_url=None,
             _state["api_key"] = api_key_override
         if not _current_state:
             return json.dumps({"error": "No article generated yet."})
-        if not (text_feedback or "").strip() and not (html_feedback or "").strip():
-            return json.dumps({"error": "No feedback provided."})
         result = run_feedback_pipeline(text_feedback, html_feedback, _current_state, title)
         _current_state.update({
             "article_text": result["article_text"],

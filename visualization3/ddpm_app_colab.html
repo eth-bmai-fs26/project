@@ -571,11 +571,9 @@
       var data = await callPython(
         google.colab.kernel.invokeFunction('colabDeleteHistory', [], {})
       );
+      alert('Deleted: ' + (data.deleted ? data.deleted.join(', ') : 'history'));
       document.getElementById('history-panel').innerHTML = '';
       document.getElementById('feedback-section').classList.remove('visible');
-      var old = document.getElementById('injected-preview');
-      if (old) old.remove();
-      document.getElementById('empty-state').style.display = '';
       currentNumImages   = 0;
       currentImageStyles = [];
       clearProgress();
