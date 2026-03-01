@@ -50,7 +50,7 @@ class SimpleUNet(nn.Module):
 
         # Decoder
         self.up4 = nn.ConvTranspose2d(base_ch * 8, base_ch * 8, 4, stride=2, padding=1)
-        self.dec4 = ConvBlock(base_ch * 8 + base_ch * 8, base_ch * 2, emb_dim)
+        self.dec4 = ConvBlock(base_ch * 8 + base_ch * 8, base_ch * 4, emb_dim)
 
         self.up3 = nn.ConvTranspose2d(base_ch * 4, base_ch * 4, 4, stride=2, padding=1)
         self.dec3 = ConvBlock(base_ch * 4 + base_ch * 4, base_ch * 2, emb_dim)
@@ -101,7 +101,7 @@ class SimpleUNet(nn.Module):
         u2 = self.up2(u3)                                             # (B, base_ch * 2,  16,  16)
         u2 = torch.cat([u2, e2], dim=1)                               # (B, base_ch * 4,  16,  16)
         u2 = self.dec2(u2, cond_emb)                                  # (B, base_ch,      16,  16)
-        
+
         u1 = self.up1(u2)                                             # (B, base_ch,      32,  32)
         u1 = torch.cat([u1, e1], dim=1)                               # (B, base_ch * 2,  32,  32)
         u1 = self.dec1(u1, cond_emb)                                  # (B, base_ch,      32,  32)
