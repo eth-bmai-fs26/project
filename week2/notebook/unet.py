@@ -35,19 +35,29 @@ class SimpleUNet(nn.Module):
         # Encoder
         self.enc1 = ConvBlock(self.in_ch, base_ch, emb_dim)
         self.down1 = nn.Conv2d(base_ch, base_ch, 4, stride=2, padding=1)
+
         self.enc2 = ConvBlock(base_ch, base_ch * 2, emb_dim)
         self.down2 = nn.Conv2d(base_ch * 2, base_ch * 2, 4, stride=2, padding=1)
+
         self.enc3 = ConvBlock(base_ch * 2, base_ch * 4, emb_dim)
         self.down3 = nn.Conv2d(base_ch * 4, base_ch * 4, 4, stride=2, padding=1)
 
+        self.enc4 = ConvBlock(base_ch * 4, base_ch * 8, emb_dim)
+        self.down4 = nn.Conv2d(base_ch * 8, base_ch * 8, 4, stride=2, padding=1)
+
         # Bottleneck
-        self.bot = ConvBlock(base_ch * 4, base_ch * 4, emb_dim)
+        self.bot = ConvBlock(base_ch * 8, base_ch * 8, emb_dim)
 
         # Decoder
+        self.up4 = nn.ConvTranspose2d(base_ch * 8, base_ch * 8, 4, stride=2, padding=1)
+        self.dec4 = ConvBlock(base_ch * 8 + base_ch * 8, base_ch * 2, emb_dim)
+
         self.up3 = nn.ConvTranspose2d(base_ch * 4, base_ch * 4, 4, stride=2, padding=1)
         self.dec3 = ConvBlock(base_ch * 4 + base_ch * 4, base_ch * 2, emb_dim)
+
         self.up2 = nn.ConvTranspose2d(base_ch * 2, base_ch * 2, 4, stride=2, padding=1)
         self.dec2 = ConvBlock(base_ch * 2 + base_ch * 2, base_ch, emb_dim)
+
         self.up1 = nn.ConvTranspose2d(base_ch, base_ch, 4, stride=2, padding=1)
         self.dec1 = ConvBlock(base_ch + base_ch, base_ch, emb_dim)
 
@@ -66,24 +76,32 @@ class SimpleUNet(nn.Module):
         cond_emb = self.cond_mlp(time_emb + label_emb)
         
         # encoder
-        e1 = self.enc1(x, cond_emb)            # (B, base_ch,  32, 32)
-        d1 = self.down1(e1)                    # (B, base_ch,  16, 16)
-        e2 = self.enc2(d1, cond_emb)           # (B, base_ch * 2, 16, 16)
-        d2 = self.down2(e2)                    # (B, base_ch * 2,  8,  8)
-        e3 = self.enc3(d2, cond_emb)           # (B, base_ch * 4,  8,  8)
-        d3 = self.down3(e3)                    # (B, base_ch * 4,  4,  4)
+        e1 = self.enc1(x, cond_emb)            # (B, base_ch)
+        d1 = self.down1(e1)                    # (B, base_ch)
+        e2 = self.enc2(d1, cond_emb)           # (B, base_ch * 2)
+        d2 = self.down2(e2)                    # (B, base_ch * 2)
+        e3 = self.enc3(d2, cond_emb)           # (B, base_ch * 4)
+        d3 = self.down3(e3)                    # (B, base_ch * 4)
+        e4 = self.enc4(d3, cond_emb)           # (B, base_ch * 8)
+        d4 = self.down4(e4)                    # (B, base_ch * 8)
 
         # bottleneck
-        b = self.bot(d3, cond_emb)             # (B, base_ch * 4,  4,  4)
+        b = self.bot(d4, cond_emb)             # (B, base_ch * 8)
 
         # decoder
-        u3 = self.up3(b)                                               # (B, base_ch * 4,  ~8,  ~8)
-        u3 = F.interpolate(u3, size=e3.shape[2:], mode='nearest')     # align to e3's spatial size
-        u3 = torch.cat([u3, e3], dim=1)                               # (B, base_ch * 8,   8,   8)
+        u4 = self.up4(b)                                               # (B, base_ch * 4,  ~8,  ~8)
+        u4 = F.interpolate(u4, size=e4.shape[2:], mode='nearest')     # align to e3's spatial size
+        u4 = torch.cat([u4, e4], dim=1)                               # (B, base_ch * 8,   8,   8)
+        u4 = self.dec4(u4, cond_emb)
+        
+        u3 = self.up3(u4)                                             # (B, base_ch * 2,  16,  16)
+        u3 = torch.cat([u3, e3], dim=1)                               # (B, base_ch * 4,  16,  16)
         u3 = self.dec3(u3, cond_emb)                                  # (B, base_ch * 2,   8,   8)
+
         u2 = self.up2(u3)                                             # (B, base_ch * 2,  16,  16)
         u2 = torch.cat([u2, e2], dim=1)                               # (B, base_ch * 4,  16,  16)
         u2 = self.dec2(u2, cond_emb)                                  # (B, base_ch,      16,  16)
+        
         u1 = self.up1(u2)                                             # (B, base_ch,      32,  32)
         u1 = torch.cat([u1, e1], dim=1)                               # (B, base_ch * 2,  32,  32)
         u1 = self.dec1(u1, cond_emb)                                  # (B, base_ch,      32,  32)
