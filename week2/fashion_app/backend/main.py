@@ -128,7 +128,7 @@ def serve_output(filename):
     return send_from_directory(OUTPUT_DIR, filename)
 
 
-# ── CV routes ─────────────────────────────────────────────────────────────────
+# ── CV routes ────────────────────────────────────────────────────────────────
 
 @app.route("/detect", methods=["POST"])
 def detect():
