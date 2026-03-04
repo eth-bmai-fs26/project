@@ -64,48 +64,24 @@ def load_history(kind: str) -> list:
         return json.load(f)
 
 
-# ── 🎯 TASK 1: generate_image ────────────────────────────────────────────────
-#
-# Your job: call the DALL-E 3 API to generate one image, save it to disk,
-# and return the filename so the rest of the app can use it.
-#
-# The function receives:
-#   title  — the article title  (e.g. "Summer 2025 Trends")
-#   style  — a short description of the desired image
-#             (e.g. "a minimalist editorial photo of a white linen dress")
-#
-# It must return:
-#   filename — the name of the saved PNG file (e.g. "image_20250101_120000_editorial.png")
-#
-# Steps to implement:
-#   1. Build a prompt string that combines `title` and `style`.
-#   2. Call client.images.generate() with model="azure/dall-e-3", size="1024x1024", n=1.
-#   3. Build a unique filename using datetime.now().strftime("%Y%m%d_%H%M%S").
-#   4. Save the image bytes to OUTPUT_DIR/<filename>.
-#   5. Call save_history("images", {...}) to log the result.
-#   6. Return the filename string.
-
-
 def generate_image(title: str, style: str) -> str:
+    """Generates one image via DALL-E 3, saves to disk, returns filename."""
     client = get_client()
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    # TODO 1: Build a prompt that tells DALL-E what kind of image to generate.
-    #         Hint: Use both `title` and `style` so the image fits the article.
-    prompt = "" 
-
-    # TODO 2: Call the DALL-E 3 API.
-    #         Hint: client.images.generate(model=..., prompt=..., size=..., n=...)
-    resp = None 
-
+    prompt = f"Generate {style} for a fashion article about: {title}"
+    resp = client.images.generate(
+        model="azure/dall-e-3",
+        prompt=prompt,
+        size="1024x1024",
+        n=1,
+    )
     image_data = resp.data[0]
+    # DALL-E returns either a URL or base64 — handle both
     raw = image_data.url if image_data.url else image_data.b64_json
 
-    # TODO 4: Build a unique filename for this image.
-    #         Hint: use datetime.now().strftime("%Y%m%d_%H%M%S") and include part of `style`.
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = ""  
+    filename = f"image_{ts}_{style[:20].replace(' ','_')}.png"
     path = os.path.join(OUTPUT_DIR, filename)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     if raw.startswith("http"):
         # URL → download image bytes and save to disk
@@ -119,8 +95,19 @@ def generate_image(title: str, style: str) -> str:
             f.write(base64.b64decode(raw))
 
     save_history("images", {"title": title, "style": style, "filename": filename})
+    return filename
 
-    return filename 
+
+def generate_article(query: str) -> str:
+    """Generates article text via Claude Sonnet."""
+    client = get_client()
+    resp = client.chat.completions.create(
+        model="anthropic/claude-sonnet-4-5",
+        messages=[{"role": "user", "content": f"Write a fashion article about: {query}"}],
+    )
+    article = resp.choices[0].message.content
+    save_history("text", {"query": query, "article_preview": article[:300]})
+    return article
 
 
 def should_regenerate_image(feedback: str) -> bool:
@@ -152,21 +139,6 @@ Respond ONLY with "yes" or "no"."""
     answer = resp.choices[0].message.content.strip().lower()
     print(f"[should_regenerate_image] feedback='{feedback}' → {answer}")
     return answer == "yes"
-
-
-
-# ── Already implemented — no changes needed below this line ───────────────────
-
-def generate_article(query: str) -> str:
-    """Generates article text via Claude Sonnet."""
-    client = get_client()
-    resp = client.chat.completions.create(
-        model="anthropic/claude-sonnet-4-5",
-        messages=[{"role": "user", "content": f"Write a fashion article about: {query}"}],
-    )
-    article = resp.choices[0].message.content
-    save_history("text", {"query": query, "article_preview": article[:300]})
-    return article
 
 
 def extract_image_style_from_feedback(feedback: str, original_style: str) -> str:
@@ -269,7 +241,7 @@ def validate_html(html: str, image_filenames: list) -> tuple[bool, list, str]:
 
     errors = []
 
-    # Strip markdown fences if LLM wrapped output
+    # 1. Strip markdown fences if LLM wrapped output
     s = html.strip()
     if s.startswith("```"):
         lines = s.split("\n")[1:]
@@ -277,7 +249,7 @@ def validate_html(html: str, image_filenames: list) -> tuple[bool, list, str]:
             lines = lines[:-1]
         html = "\n".join(lines)
 
-    # Basic structural checks
+    # 2. Basic structural checks
     required = {
         "<!DOCTYPE html>": "missing <!DOCTYPE html> declaration",
         "<html":           "missing <html> tag",
@@ -290,12 +262,12 @@ def validate_html(html: str, image_filenames: list) -> tuple[bool, list, str]:
         if token not in html:
             errors.append(message)
 
-    # Image reference checks
+    # 3. Image reference checks
     for f in image_filenames:
         if f not in html:
             errors.append(f"image '{f}' not referenced in HTML")
 
-    # Tag balancing
+    # 4. Tag balancing and attribute validation
     VOID_ELEMENTS = {
         "area", "base", "br", "col", "embed", "hr", "img",
         "input", "link", "meta", "param", "source", "track", "wbr",
@@ -351,18 +323,23 @@ def validate_html(html: str, image_filenames: list) -> tuple[bool, list, str]:
     except Exception as exc:
         errors.append(f"HTML parsing exception: {exc}")
 
-    # CSS brace balance check
+    # 5. CSS brace balance check
     style_blocks = re.findall(r"<style[^>]*>(.*?)</style>", html, re.DOTALL | re.IGNORECASE)
     if style_blocks:
         css = "\n".join(style_blocks)
         if css.count("{") != css.count("}"):
-            errors.append(f"CSS brace mismatch: {css.count('{')} opening vs {css.count('}')} closing")
+            errors.append(f"CSS brace mismatch: {css.count('{')}' opening vs {css.count('}')}' closing")
 
     return (len(errors) == 0, errors, html)
 
 
+
+
 def patch_truncated_html(html: str) -> str:
-    """Appends missing closing tags if the LLM output was truncated."""
+    """
+    If the LLM output was truncated and is missing closing tags,
+    append them so validation has a chance to pass.
+    """
     html = html.strip()
     if "</li>" not in html and "<li" in html:
         html += "\n</li>"
@@ -387,12 +364,14 @@ def patch_truncated_html(html: str) -> str:
         html += "\n</html>"
     return html
 
-
 def safe_html_pipeline(generate_fn, image_filenames: list,
                        emit=None, max_attempts: int = 3) -> tuple[str, bool]:
     """
     Tries to generate and validate HTML up to max_attempts times.
     On each retry, passes previous errors back to the LLM so it can fix them.
+    Falls back to emergency_fallback_html if all attempts fail.
+
+    generate_fn(attempt, previous_errors) → raw HTML string
     """
     last_errors = []
     last_html   = ""
@@ -400,8 +379,9 @@ def safe_html_pipeline(generate_fn, image_filenames: list,
     for attempt in range(1, max_attempts + 1):
         if emit:
             emit(f"HTML generation attempt {attempt}/{max_attempts}…")
-        raw   = generate_fn(attempt, last_errors)
+        raw = generate_fn(attempt, last_errors)
         fixed = fix_image_paths(raw, image_filenames)
+        # If output was truncated, close any missing structural tags
         fixed = patch_truncated_html(fixed)
         valid, errors, cleaned = validate_html(fixed, image_filenames)
 
@@ -416,13 +396,16 @@ def safe_html_pipeline(generate_fn, image_filenames: list,
             emit(f"⚠️ Validation failed ({len(errors)} errors), retrying with corrections…")
         print(f"[Attempt {attempt}/{max_attempts}] Errors: {errors}")
 
+    # All attempts exhausted
     if emit:
         emit("🚨 Max retries reached — using emergency fallback HTML.")
     return last_html, False
 
-
 def fix_image_paths(html: str, image_filenames: list) -> str:
-    """Normalises all image src paths to /output/<filename>."""
+    """
+    Corrects image src paths in LLM-generated HTML.
+    LLMs sometimes use wrong path variants — this normalises them all to /output/<filename>.
+    """
     for filename in image_filenames:
         wrong_variants = [
             f'src="{filename}"',
@@ -465,17 +448,21 @@ def emergency_fallback_html(title: str, article_text: str, image_filenames: list
 </html>"""
 
 
-# ── Fresh Pipeline ────────────────────────────────────────────────────────────
+# ── Fresh Pipeline ─────────────────────────────────────────────────────────────
 
 def run_pipeline(title: str, image_styles: list, article_query: str,
                  progress_callback=None):
+    """
+    Full generation pipeline — generates everything from scratch.
+    Uses only the fashion dataset as grounding, no prior session history.
+    """
     def emit(step, total, msg):
         if progress_callback:
             progress_callback(step, total, msg)
         print(f"[{step}/{total}] {msg}")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    total = 1 + len(image_styles) + 2
+    total = 1 + len(image_styles) + 2  # trend data + images + article + html
 
     step = 1
     emit(step, total, "Fetching fashion trend data…")
@@ -502,6 +489,7 @@ def run_pipeline(title: str, image_styles: list, article_query: str,
     client = get_client()
 
     def generate_fn(attempt, previous_errors):
+        # On retries, feed the previous errors back to the LLM so it can fix them
         prompt = base_prompt
         if previous_errors:
             prompt += f"""
@@ -545,19 +533,25 @@ IMPORTANT — Your previous attempt had these HTML errors. Please fix all of the
     }
 
 
-# ── Feedback Pipeline ─────────────────────────────────────────────────────────
+# ── Feedback Pipeline ──────────────────────────────────────────────────────────
 
 def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
                           current_filename: str, current_image_filenames: list,
                           title: str, image_styles: list,
                           progress_callback=None):
+    """
+    Feedback pipeline — applies targeted edits to an existing article.
+    image_feedbacks: {1: "feedback for image 1", 2: "feedback for image 2", ...}
+    text_feedback: free text for article text changes.
+    Only regenerates images where feedback requests a change.
+    """
     def emit(step, total, msg):
         if progress_callback:
             progress_callback(step, total, msg)
         print(f"[{step}/{total}] {msg}")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    total = 2 + len(image_feedbacks) + 1
+    total = 2 + len(image_feedbacks) + 1  # load + images + apply feedback
 
     step = 1
     emit(step, total, "Loading existing article…")
@@ -565,7 +559,8 @@ def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
     with open(html_path, encoding="utf-8") as f:
         existing_html = f.read()
 
-    updated_image_map     = {}
+    # Regenerate only images where user actually requested a change
+    updated_image_map = {}
     final_image_filenames = list(current_image_filenames)
 
     for idx, img_feedback in image_feedbacks.items():
@@ -584,10 +579,11 @@ def run_feedback_pipeline(text_feedback: str, image_feedbacks: dict,
             old_filename = current_image_filenames[idx - 1]
             new_filename = generate_image(title, new_style)
             updated_image_map[old_filename] = new_filename
-            final_image_filenames[idx - 1]  = new_filename
+            final_image_filenames[idx - 1] = new_filename
         except Exception as e:
             emit(step, total, f"⚠️ Image {idx} regeneration failed: {e}")
 
+    # Apply text feedback + image replacements to existing HTML
     step += 1
     emit(step, total, "Applying feedback to article…")
     base_prompt = build_feedback_prompt(existing_html, text_feedback, updated_image_map)
@@ -638,7 +634,7 @@ IMPORTANT — Your previous attempt had these HTML errors. Please fix all of the
     }
 
 
-# ── SSE Stream Helper ─────────────────────────────────────────────────────────
+# ── SSE Stream Helper ──────────────────────────────────────────────────────────
 
 def stream_pipeline(pipeline_fn):
     """Generic SSE streamer — runs pipeline in background thread, streams progress to browser."""
@@ -658,7 +654,7 @@ def stream_pipeline(pipeline_fn):
         except Exception as ex:
             q.put(json.dumps({"type": "error", "message": str(ex)}))
         finally:
-            q.put(None)
+            q.put(None)  # sentinel — tells stream to stop
 
     thread = threading.Thread(target=run, daemon=True)
     thread.start()
@@ -700,7 +696,7 @@ def generate():
 def feedback():
     data                    = request.json
     text_feedback           = data.get("text_feedback", "").strip()
-    image_feedbacks         = data.get("image_feedbacks", {})
+    image_feedbacks         = data.get("image_feedbacks", {})   # {index: feedback_text}
     current_filename        = data.get("current_filename", "").strip()
     current_image_filenames = data.get("current_image_filenames", [])
     title                   = data.get("title", "").strip()
@@ -724,6 +720,7 @@ def feedback():
 
 @app.route("/article-html/<filename>")
 def article_html_raw(filename):
+    """Returns raw HTML for iframe rendering — bypasses template to avoid path issues."""
     html_path = os.path.join(OUTPUT_DIR, filename)
     if not os.path.exists(html_path):
         return "Article not found", 404
@@ -733,6 +730,7 @@ def article_html_raw(filename):
 
 @app.route("/article/<filename>")
 def view_article(filename):
+    """Renders article in article.html template wrapper."""
     html_path = os.path.join(OUTPUT_DIR, filename)
     if not os.path.exists(html_path):
         return render_template("error.html",
@@ -745,6 +743,7 @@ def view_article(filename):
 
 @app.route("/delete", methods=["POST"])
 def delete_history():
+    """Deletes all history JSON files."""
     deleted = []
     for kind in ["articles", "images", "text"]:
         path = os.path.join(HISTORY_DIR, f"{kind}.json")
@@ -756,6 +755,7 @@ def delete_history():
 
 @app.route("/history/<kind>")
 def get_history(kind):
+    """Returns history JSON for the UI history panel."""
     if kind not in ("articles", "images", "text"):
         return jsonify({"error": "Invalid history type"}), 400
     return jsonify(load_history(kind))
@@ -763,6 +763,7 @@ def get_history(kind):
 
 @app.route("/output/<path:filename>")
 def serve_output(filename):
+    """Serves generated files (images and HTML) to the browser."""
     return send_from_directory(OUTPUT_DIR, filename)
 
 

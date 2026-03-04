@@ -1,5 +1,64 @@
 # Fashion Magazine Generator — Flask App
 
+
+# What Is Flask?
+
+[Flask](https://flask.palletsprojects.com/) is a **lightweight Python web framework**.
+
+Let’s break that down:
+
+- **Python** → The programming language this project is written in.
+- **Web framework** → A tool that helps you build websites or web applications.
+- **Lightweight** → Simple, flexible, and easy to understand.
+
+In this project, Flask:
+
+- Runs a **local web server**
+- Displays the Fashion Magazine interface in your browser
+
+# 🎯 Task 1 — Implement `generate_image()` Using DALL·E
+
+When you compared your notebook results with the web application, you probably noticed a big difference in image quality.
+
+That’s because:
+
+- Your training dataset contains **very simple and limited images**
+- The application uses **DALL·E**, a large-scale generative model trained on massive amounts of image–text data
+
+---
+
+## What Is DALL·E?
+
+**DALL·E** is a text-to-image model developed by OpenAI.
+
+It:
+- Takes a **text prompt** as input  
+- Generates a high-quality image matching that description  
+- Has been trained on a very large and diverse dataset  
+- Produces realistic, detailed, editorial-style images  
+
+In this application, DALL·E is used to generate **fashion editorial images** based on:
+
+- The article title  
+- The image style description  
+
+Your task is to understand how the API call works and implement it step by step.
+
+---
+
+# Your Goal
+
+You will implement the `generate_image()` function. inside the app.py file
+
+This function must:
+
+1. Build a strong image prompt  
+2. Call the DALL·E API  
+3. Handle two possible response formats  
+4. Save the image to disk  
+5. Return the generated filename  
+
+Once you have done your changes continue with the setup to test your results
 ## Setup
 
 ### 1. Create your `.env` file
