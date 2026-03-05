@@ -38,7 +38,7 @@ def run_pipeline(client, title: str, image_styles: list, article_query: str,
     total = 4 + len(image_styles)
 
     step = 1
-    emit(step, total, "Refining inputs…")
+    #emit(step, total, "Refining inputs…")
     refined = refine_user_inputs(client, article_query, image_styles)
     emit(step, total, f"✏️  Intent: '{refined['clean_intent']}'")
 

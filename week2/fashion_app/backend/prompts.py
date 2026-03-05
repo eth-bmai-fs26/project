@@ -5,37 +5,15 @@ Pure string-building functions for every LLM prompt in the pipeline.
 No side effects — safe to import anywhere and easy to iterate on independently.
 """
 
-
-def build_refinement_prompt(article_query: str, image_styles: list[str]) -> str:
-    styles_block = "\n".join(f"IMAGE_{i+1}: {s}" for i, s in enumerate(image_styles))
-    return f"""You are refining user inputs for a fashion magazine generator.
-All inputs may contain filler words, instructions, or vague descriptions.
-Your job is to return clean, optimised versions for each component.
-
-CONTEXT: This is for a fashion magazine app used at ETH Zurich (a Swiss university).
-
-ARTICLE QUERY: {article_query}
-
-IMAGE INPUTS:
-{styles_block}
-
-Return EXACTLY this format (one line each, no extra text):
-INTENT: <3-6 keywords, core fashion topic only, no filler>
-ARTICLE: <refined article query, editorial tone, specific>
-IMAGE_1: <refined DALL-E prompt — visual description, fashion photography language>
-IMAGE_2: <refined DALL-E prompt — if exists>
-...and so on for each image
-
-Rules:
-- INTENT:   strip all filler ("I want", "generate", "please", "fashion magazine about"), max 8 words
-- ARTICLE:  keep the full topic, make it editorial and specific, max 30 words
-- IMAGE_X:  keep it SHORT and visual — max 15 words
-            if input is already descriptive, keep it nearly as-is
-            only add: photography style or lighting if missing
-            do NOT write full sentences or paragraphs
-"""
-
-
+def build_image_prompt(title: str, style: str, attempt: int) -> str:
+    if attempt == 1:
+        return f"{style}. Subject: {title}. Safe for work, no nudity, no suggestive content."
+    return (
+        f"High quality image: {style}. "
+        f"Subject: {title}. "
+        f"Sharp focus. Safe for work, no nudity, no suggestive content."
+    )
+    
 def build_article_prompt(query: str, relevant_fashion_data: str) -> str:
     return f"""You are a fashion journalist and expert writer.
 Write a compelling, well-structured fashion article based on the topic and the relevant fashion data provided.
@@ -103,6 +81,34 @@ EXISTING HTML TO EDIT:
 {existing_html}
 """
 
+def build_refinement_prompt(article_query: str, image_styles: list[str]) -> str:
+    styles_block = "\n".join(f"IMAGE_{i+1}: {s}" for i, s in enumerate(image_styles))
+    return f"""You are refining user inputs for a fashion magazine generator.
+All inputs may contain filler words, instructions, or vague descriptions.
+Your job is to return clean, optimised versions for each component.
+
+CONTEXT: This is for a fashion magazine app used at ETH Zurich (a Swiss university).
+
+ARTICLE QUERY: {article_query}
+
+IMAGE INPUTS:
+{styles_block}
+
+Return EXACTLY this format (one line each, no extra text):
+INTENT: <3-6 keywords, core fashion topic only, no filler>
+ARTICLE: <refined article query, editorial tone, specific>
+IMAGE_1: <refined DALL-E prompt — visual description, fashion photography language>
+IMAGE_2: <refined DALL-E prompt — if exists>
+...and so on for each image
+
+Rules:
+- INTENT:   strip all filler ("I want", "generate", "please", "fashion magazine about"), max 8 words
+- ARTICLE:  keep the full topic, make it editorial and specific, max 30 words
+- IMAGE_X:  keep it SHORT and visual — max 15 words
+            if input is already descriptive, keep it nearly as-is
+            only add: photography style or lighting if missing
+            do NOT write full sentences or paragraphs
+"""
 
 def inject_validation_errors(base_prompt: str, errors: list[str]) -> str:
     """Appends a list of HTML validation errors to an existing prompt for retry attempts."""

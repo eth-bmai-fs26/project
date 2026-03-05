@@ -2,7 +2,6 @@
 generation.py
 ─────────────
 Image generation (DALL-E 3 + CLIP quality check) and article writing.
-Input refinement via LLM pre-pass also lives here.
 """
 
 import os
@@ -17,8 +16,67 @@ from config import (
 )
 from clip_utils import score_image_text_alignment
 from history import save_history
-from prompts import build_refinement_prompt, build_article_prompt
+from prompts import build_refinement_prompt, build_article_prompt, build_image_prompt
 
+# ── Image generation ──────────────────────────────────────────────────────────
+def generate_image(client, title: str, style: str, max_attempts: int = 2) -> tuple[str, float]:
+    """
+    Generates one image via DALL-E 3, saves to disk.
+    Scores alignment with CLIP. Retries once if score is below threshold.
+    Returns (filename, clip_score).
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    last_filename = ""
+    last_score    = 0.0
+
+    for attempt in range(1, max_attempts + 1):
+        prompt = build_image_prompt(title, style, attempt)
+
+        resp       = client.images.generate(model=IMAGE_MODEL, prompt=prompt, size="1024x1024", n=1)
+        image_data = resp.data[0]
+        raw        = image_data.url if image_data.url else image_data.b64_json
+
+        ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"image_{ts}_{style[:20].replace(' ', '_')}.png"
+        path     = os.path.join(OUTPUT_DIR, filename)
+
+        if raw.startswith("http"):
+            r = requests.get(raw, timeout=30)
+            r.raise_for_status()
+            with open(path, "wb") as f:
+                f.write(r.content)
+        else:
+            with open(path, "wb") as f:
+                f.write(base64.b64decode(raw))
+
+        clip_score    = score_image_text_alignment(path, style)
+        last_filename = filename
+        last_score    = clip_score
+
+        if clip_score >= CLIP_SCORE_THRESHOLD or attempt == max_attempts:
+            save_history("images", {
+                "title": title, "style": style,
+                "filename": filename, "clip_score": clip_score,
+            })
+            return filename, clip_score
+
+        print(f"[generate_image] Score {clip_score:.3f} below threshold, retrying...")
+
+    return last_filename, last_score
+
+# ── Article generation ────────────────────────────────────────────────────────
+
+def generate_article(client, query: str, relevant_data: str) -> str:
+    """Generates a fashion article grounded in relevant fashion data."""
+    prompt = build_article_prompt(query, relevant_data)
+    resp   = client.chat.completions.create(
+        model=LLM_MODEL,
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    article_text = resp.choices[0].message.content.strip()
+    save_history("text", {"query": query, "article_preview": article_text[:300]})
+    return article_text
 
 # ── Input refinement ──────────────────────────────────────────────────────────
 
@@ -83,84 +141,3 @@ def refine_user_inputs(client, article_query: str, image_styles: list[str]) -> d
         print(f"[refine] image {i+1}: \"{s}\"")
 
     return result
-
-# ── Image generation ──────────────────────────────────────────────────────────
-
-# Realism prefix on every attempt — forces photographic output,
-# prevents DALL-E defaulting to painterly/illustrated styles.
-_PHOTO_PREFIX = (
-    "Fashion editorial photography, studio lighting, "
-    "professional magazine shoot, clean background. "
-)
-
-
-def _build_image_prompt(title: str, style: str, attempt: int) -> str:
-    if attempt == 1:
-        return f"{_PHOTO_PREFIX}{style}. Subject: {title}."
-    return (
-        f"{_PHOTO_PREFIX}"
-        f"High-end fashion editorial: {style}. "
-        f"Subject: {title}. "
-        f"Shot with 85mm lens, soft natural light, sharp focus, Vogue magazine quality."
-    )
-
-
-def generate_image(client, title: str, style: str, max_attempts: int = 2) -> tuple[str, float]:
-    """
-    Generates one image via DALL-E 3, saves to disk.
-    Scores alignment with CLIP. Retries once if score is below threshold.
-    Returns (filename, clip_score).
-    """
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    last_filename = ""
-    last_score    = 0.0
-
-    for attempt in range(1, max_attempts + 1):
-        prompt = _build_image_prompt(title, style, attempt)
-
-        resp       = client.images.generate(model=IMAGE_MODEL, prompt=prompt, size="1024x1024", n=1)
-        image_data = resp.data[0]
-        raw        = image_data.url if image_data.url else image_data.b64_json
-
-        ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"image_{ts}_{style[:20].replace(' ', '_')}.png"
-        path     = os.path.join(OUTPUT_DIR, filename)
-
-        if raw.startswith("http"):
-            r = requests.get(raw, timeout=30)
-            r.raise_for_status()
-            with open(path, "wb") as f:
-                f.write(r.content)
-        else:
-            with open(path, "wb") as f:
-                f.write(base64.b64decode(raw))
-
-        clip_score    = score_image_text_alignment(path, style)
-        last_filename = filename
-        last_score    = clip_score
-
-        if clip_score >= CLIP_SCORE_THRESHOLD or attempt == max_attempts:
-            save_history("images", {
-                "title": title, "style": style,
-                "filename": filename, "clip_score": clip_score,
-            })
-            return filename, clip_score
-
-        print(f"[generate_image] Score {clip_score:.3f} below threshold, retrying...")
-
-    return last_filename, last_score
-
-
-# ── Article generation ────────────────────────────────────────────────────────
-
-def generate_article(client, query: str, relevant_data: str) -> str:
-    """Generates a fashion article grounded in relevant fashion data."""
-    prompt = build_article_prompt(query, relevant_data)
-    resp   = client.chat.completions.create(
-        model=LLM_MODEL,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    article_text = resp.choices[0].message.content.strip()
-    save_history("text", {"query": query, "article_preview": article_text[:300]})
-    return article_text
