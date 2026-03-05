@@ -34,7 +34,7 @@ client = openai.OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
 @app.route("/")
 def index():
-    return render_template("fashion_magazine1.html")
+    return render_template("fashion_magazine.html")
 
 
 @app.route("/article/<filename>")
@@ -221,4 +221,4 @@ def remove():
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5002)
+    app.run(debug=True, port=5003)

@@ -13,7 +13,6 @@ All inputs may contain filler words, instructions, or vague descriptions.
 Your job is to return clean, optimised versions for each component.
 
 CONTEXT: This is for a fashion magazine app used at ETH Zurich (a Swiss university).
-"ETH" always refers to ETH Zurich university — NEVER to Ethereum or cryptocurrency.
 
 ARTICLE QUERY: {article_query}
 
@@ -37,38 +36,45 @@ Rules:
 """
 
 
-def build_article_prompt(query: str) -> str:
-    return f"Write a fashion article about: {query}"
+def build_article_prompt(query: str, relevant_fashion_data: str) -> str:
+    return f"""You are a fashion journalist and expert writer.
+Write a compelling, well-structured fashion article based on the topic and the relevant fashion data provided.
 
+ARTICLE TOPIC: {query}
 
-def build_fresh_html_prompt(title: str, article_query: str, relevant_fashion_data: str,
+RELEVANT FASHION DATA (most similar products and trends retrieved for this topic):
+{relevant_fashion_data}
+
+RULES:
+- Write in an engaging, editorial magazine tone
+- Naturally incorporate details from the fashion data (textures, colors, materials, styles)
+- Structure the article with an introduction, body paragraphs, and a conclusion
+- Return ONLY the article text — no titles, no HTML, no markdown
+"""
+
+def build_fresh_html_prompt(title: str, article_query: str,
                              article_text: str, image_filenames: list[str]) -> str:
     images_list = "\n".join(f"  - /output/{f}" for f in image_filenames)
-    return f"""You are a fashion expert, editor, and web designer.
-Produce a COMPLETE, beautiful, standalone HTML page combining the article and ALL images.
+    return f"""You are a web designer and front-end developer specialising in editorial fashion pages.
+Produce a COMPLETE, beautiful, standalone HTML page for the article and images below.
 
 ARTICLE TITLE: {title}
+ARTICLE TOPIC: {article_query}
 
 AVAILABLE IMAGES (use these exact paths in <img> src):
 {images_list}
 
 RULES:
-• Return a COMPLETE HTML document (<!DOCTYPE html> … </html>)
-• Embedded CSS in a <style> tag — modern, elegant, magazine-like
-• Use "{title}" as <h1>
-• Use ALL image paths above in <img src="…">
-• Responsive layout, no external CDN/fonts
-• Return ONLY the raw HTML, no markdown fences
+- Return a COMPLETE HTML document (<!DOCTYPE html> … </html>)
+- Embedded CSS in a <style> tag — modern, elegant, magazine-like
+- Use "{title}" as <h1>
+- Use ALL image paths above in <img src="…">
+- Responsive layout, no external CDN/fonts
+- Return ONLY the raw HTML, no markdown fences
 
-DRAFT ARTICLE:
+ARTICLE TEXT:
 {article_text}
-
-ARTICLE TOPIC: {article_query}
-
-RELEVANT FASHION DATA (most similar products/trends retrieved for this topic):
-{relevant_fashion_data}
 """
-
 
 def build_feedback_html_prompt(existing_html: str, text_feedback: str,
                                 updated_image_map: dict) -> str:

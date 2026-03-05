@@ -14,7 +14,8 @@ from datetime import datetime
 from flask import Response, stream_with_context
 
 from config import OUTPUT_DIR, CLIP_SCORE_THRESHOLD, LLM_MODEL
-from clip_utils import retrieve_relevant_fashion_data
+# from clip_utils import retrieve_relevant_fashion_data
+from bert_utils import retrieve_relevant_fashion_data
 from generation import refine_user_inputs, generate_image, generate_article
 from html_pipeline import (
     make_generate_fn, safe_html_pipeline, emergency_fallback_html,
@@ -61,11 +62,11 @@ def run_pipeline(client, title: str, image_styles: list, article_query: str,
 
     step += 1
     emit(step, total, "Writing article…")
-    article_text = generate_article(client, article_query)
+    article_text = generate_article(client, article_query, relevant_data)  
 
     step += 1
     emit(step, total, "Assembling final HTML page…")
-    base_prompt  = build_fresh_html_prompt(title, article_query, relevant_data, article_text, image_filenames)
+    base_prompt = build_fresh_html_prompt(title, article_query, article_text, image_filenames)  
     generate_fn  = make_generate_fn(client, base_prompt, LLM_MODEL)
 
     final_html, succeeded = safe_html_pipeline(

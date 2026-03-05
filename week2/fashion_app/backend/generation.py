@@ -153,11 +153,12 @@ def generate_image(client, title: str, style: str, max_attempts: int = 2) -> tup
 
 # ── Article generation ────────────────────────────────────────────────────────
 
-def generate_article(client, query: str) -> str:
-    """Generates a fashion article for the given query and saves it to history."""
-    prompt = build_article_prompt(query)
+def generate_article(client, query: str, relevant_data: str) -> str:
+    """Generates a fashion article grounded in relevant fashion data."""
+    prompt = build_article_prompt(query, relevant_data)
     resp   = client.chat.completions.create(
         model=LLM_MODEL,
+        max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
     article_text = resp.choices[0].message.content.strip()
