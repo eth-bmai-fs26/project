@@ -1,23 +1,57 @@
-# 👗 Fashion Magazine Generator — Setup Guide
+# Fashion Magazine Generator — Flask App
 
-A Flask web application that uses LLM agents, DALL-E image generation, CLIP scoring, and BERT-based retrieval to automatically generate editorial fashion magazine pages.
+
+# What Is Flask?
+
+[Flask](https://flask.palletsprojects.com/) is a **lightweight Python web framework**.
+
+Let’s break that down:
+
+- **Python** → The programming language this project is written in.
+- **Web framework** → A tool that helps you build websites or web applications.
+- **Lightweight** → Simple, flexible, and easy to understand.
+
+In this project, Flask:
+
+- Runs a **local web server**
+- Displays the Fashion Magazine interface in your browser
+
+# 🎯 Task 1 — Implement `generate_image()` Using DALL·E
+
+When you compared your notebook results with the web application, you probably noticed a big difference in image quality.
+
+That’s because:
+
+- Your training dataset contains **very simple and limited images** used for DDPM
+- The application uses **DALL·E**, a large-scale generative model trained on massive amounts of image–text data
 
 ---
 
-## Table of Contents
+## What Is DALL·E?
 
-1. [Project Structure](#project-structure)
-2. [Prerequisites](#prerequisites)
-3. [Step 1 — Set Up Your API Key](#step-1--set-up-your-api-key)
-4. [Step 2 — Create a Virtual Environment](#step-2--create-a-virtual-environment)
-5. [Step 3 — Install Dependencies](#step-3--install-dependencies)
-6. [Step 4 — Run the Application](#step-4--run-the-application)
-7. [How to Use the App](#how-to-use-the-app)
-8. [Troubleshooting](#troubleshooting)
+**DALL·E** is a text-to-image model developed by OpenAI.
+
+It:
+- Takes a **text prompt** as input  
+- Generates a high-quality image matching that description  
+- Has been trained on a very large and diverse dataset  
+- Produces realistic, detailed, editorial-style images  
+
+In this application, DALL·E is used to generate **fashion editorial images** based on:
+
+- The article title  
+- The image style description  
+
+Your task is to understand how the API call works and implement it step by step.
+API calls 
 
 ---
 
-## Project Structure
+# Your Goal
+
+You will implement the `generate_image()` function.
+
+## STEP 1: understanding Project Structure
 
 ```
 fashion_app/
@@ -32,6 +66,7 @@ fashion_app/
 │   ├── pipeline.py               ← Core generation pipeline (3 LLM agents)
 │   ├── prompts.py                ← Prompt templates for each agent
 │   ├── bert_utils.py             ← BERT-based fashion data retrieval
+│   ├── generation.py             ← DALL.E generating images from text
 │   ├── dataset_preprocessing_bert.py  ← How the BERT embeddings were generated. Dont need to run this.
 │   ├── clip_utils.py             ← CLIP image-text alignment scoring
 │   ├── html_pipeline.py          ← HTML generation and validation agent       
@@ -52,6 +87,49 @@ fashion_app/
     ├── article_*.html
     └── image_*.png
 ```
+
+This seems like a lot but for the purpose of this task we will focus on specific componets:
+1️⃣ Setup files (top level) – things needed to run the project
+2️⃣ Backend code (Python) – where the logic of the app lives
+3️⃣ Frontend + data + outputs – what the app shows and what it produces
+
+
+The models you have been creating in class usually like in the backend, this is where the logic of the application lives.
+
+Though there are many files inside the backend you should only focus on 2:
+- The main.py this starts the server and connects everything together.
+- The generation.py that is responsible for generating the images using DALL.E
+
+For this task, you only need to navigate inside the backend to generation.py and modify the image generation code.
+
+## STEP 2:  Implement the `generate_image()` function.
+
+This function must:
+
+1. Build a strong image prompt  
+2. Call the DALL·E API  
+3. Save the image to disk  
+4. Return the generated filename  
+
+Once you have done your changes continue with the setup to test your results
+
+# 👗 Fashion Magazine Generator — Setup Guide
+
+A Flask web application that uses LLM agents, DALL-E image generation, CLIP scoring, and BERT-based retrieval to automatically generate editorial fashion magazine pages.
+
+---
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Step 1 — Set Up Your API Key](#step-1--set-up-your-api-key)
+3. [Step 2 — Create a Virtual Environment](#step-2--create-a-virtual-environment)
+4. [Step 3 — Install Dependencies](#step-3--install-dependencies)
+5. [Step 4 — Run the Application](#step-4--run-the-application)
+6. [How to Use the App](#how-to-use-the-app)
+7. [Troubleshooting](#troubleshooting)
+
+---
 
 > **Note:** The `output/` folder and generation history are created automatically the first time you run the app. You do not need to create them manually.
 

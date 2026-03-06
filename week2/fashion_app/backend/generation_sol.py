@@ -18,31 +18,6 @@ from clip_utils import score_image_text_alignment
 from history import save_history
 from prompts import build_refinement_prompt, build_article_prompt, build_image_prompt
 
-
-# ── 🎯 TASK 1: generate_image ────────────────────────────────────────────────
-#
-# Your job: call the DALL-E 3 API to generate one image, save it to disk,
-# and return the filename so the rest of the app can use it.
-#
-# The function receives:
-#   title  — the article title  (e.g. "Summer 2025 Trends")
-#   style  — a short description of the desired image
-#             (e.g. "a minimalist editorial photo of a white linen dress")
-#
-# It must return:
-#   filename — the name of the saved PNG file (e.g. "image_20250101_120000_editorial.png")
-#
-# Steps to implement:
-#   1. Build a prompt string that combines `title` and `style`.
-#   2. Call client.images.generate() with model="azure/dall-e-3", size="1024x1024", n=1. Look at documentation for more information https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/dall-e?utm_source=chatgpt.com&tabs=command-line%2Cgpt-image-1%2Ckeyless%2Ctypescript-keyless&pivots=programming-language-studio
-#   |  the model refers to the the image generation model you want to use.
-#   |  the prompt is the text description of the image you want the model to generate.
-#   |  the size refers to the resolution of the generated image.
-#   |  n is the number of images to generate.
-#   3. Build a unique filename using datetime.now().strftime("%Y%m%d_%H%M%S").
-#   4. Return the filename string.
-
-
 # ── Image generation ──────────────────────────────────────────────────────────
 def generate_image(client, title: str, style: str, max_attempts: int = 2) -> tuple[str, float]:
     """
@@ -55,20 +30,14 @@ def generate_image(client, title: str, style: str, max_attempts: int = 2) -> tup
     last_score    = 0.0
 
     for attempt in range(1, max_attempts + 1):
-        # TODO 1: Build a prompt that tells DALL-E what kind of image to generate.
-        #         Hint: Use both `title` and `style` so the image fits the article.
-        prompt = "" 
+        prompt = build_image_prompt(title, style, attempt)
 
-        # TODO 2: Call the DALL-E 3 API.
-        #         Hint: client.images.generate(model=..., prompt=..., size=..., n=...)
-        resp = None 
+        resp       = client.images.generate(model=IMAGE_MODEL, prompt=prompt, size="1024x1024", n=1)
         image_data = resp.data[0]
         raw        = image_data.url if image_data.url else image_data.b64_json
 
-        # TODO 3: Build a unique filename for this image.
-        #         Hint: use datetime.now().strftime("%Y%m%d_%H%M%S") and include part of `style`.
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = ""  
+        ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"image_{ts}_{style[:20].replace(' ', '_')}.png"
         path     = os.path.join(OUTPUT_DIR, filename)
 
         if raw.startswith("http"):

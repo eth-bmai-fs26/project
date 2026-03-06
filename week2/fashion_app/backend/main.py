@@ -43,8 +43,29 @@ def view_article(filename):
     if not os.path.exists(html_path):
         return render_template("error.html",
                                error_message=f"Article file '{filename}' not found."), 404
-    with open(html_path, encoding="utf-8") as f:
-        article_html = f.read()
+    # Read file with encoding fallback
+    def read_file_with_fallback(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                return f.read()
+        except UnicodeDecodeError:
+            # Try common encodings
+            for encoding in ['cp1252', 'latin-1', 'iso-8859-1']:
+                try:
+                    with open(path, encoding=encoding) as f:
+                        content = f.read()
+                        # Convert to UTF-8 and save
+                        with open(path, 'w', encoding='utf-8') as out_f:
+                            out_f.write(content)
+                        return content
+                except UnicodeDecodeError:
+                    continue
+            
+            # Final fallback
+            with open(path, 'rb') as f:
+                return f.read().decode('utf-8', errors='replace')
+    
+    article_html = read_file_with_fallback(html_path)
     title = filename.replace(".html", "").replace("_", " ").title()
     return render_template("article.html", title=title, article_html=article_html)
 
@@ -54,8 +75,34 @@ def article_html_raw(filename):
     html_path = os.path.join(OUTPUT_DIR, filename)
     if not os.path.exists(html_path):
         return "Article not found", 404
-    with open(html_path, encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "text/html"}
+    # Try UTF-8 first, fall back to other encodings
+    try:
+        with open(html_path, encoding="utf-8") as f:
+            return f.read(), 200, {"Content-Type": "text/html"}
+    except UnicodeDecodeError:
+        # Try common encodings that might handle Windows characters
+        encodings = ['cp1252', 'latin-1', 'iso-8859-1']
+        for encoding in encodings:
+            try:
+                with open(html_path, encoding=encoding) as f:
+                    content = f.read()
+                    # Optionally convert to UTF-8 and save back
+                    # This will fix the file for future reads
+                    with open(html_path, 'w', encoding='utf-8') as out_f:
+                        out_f.write(content)
+                    return content, 200, {"Content-Type": "text/html"}
+            except UnicodeDecodeError:
+                continue
+        
+        # If all else fails, read as binary and decode with error handling
+        with open(html_path, 'rb') as f:
+            content = f.read()
+            # Replace invalid characters
+            decoded_content = content.decode('utf-8', errors='replace')
+            # Optionally save the fixed version
+            with open(html_path, 'w', encoding='utf-8') as out_f:
+                out_f.write(decoded_content)
+            return decoded_content, 200, {"Content-Type": "text/html"}
 
 
 # ── Generation ────────────────────────────────────────────────────────────────
