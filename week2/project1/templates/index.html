@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warehouse Inspector</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div>
+      <div class="sidebar-logo">&#127981; Warehouse Inspector</div>
+      <div class="sidebar-subtitle">
+        U-Net segments intact tile regions. Batches with &gt;40% intact coverage are approved for reuse.
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div>
+      <div class="mode-label">Mode</div>
+      <button class="mode-btn active" id="btn-challenge">Challenge Mode</button>
+      <button class="mode-btn" id="btn-explorer">Explorer Mode</button>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div id="challenge-hint" class="sidebar-hint">
+      Look at the tile batch, decide APPROVE or REJECT, then see the U-Net mask and find out if you were right.
+    </div>
+    <div id="explorer-hint" class="sidebar-hint" style="display:none">
+      Drag the slider on any tile to compare the original image with the U-Net segmentation mask.
+    </div>
+
+    <div id="timer-section">
+      <label class="timer-toggle-label">
+        <input type="checkbox" id="timer-toggle-cb">
+        Timed mode <span class="timer-toggle-sub">(8 s per tile)</span>
+      </label>
+    </div>
+
+    <button class="btn-reset" id="btn-reset">Reset score</button>
+  </aside>
+
+  <main class="main">
+    <h1 class="main-title" id="main-title">Challenge Mode</h1>
+    <p class="main-caption" id="main-caption">
+      The algorithm uses U-Net segmentation to measure intact tile coverage.
+      It approves batches with &gt;40% intact area. Can you match it?
+    </p>
+    <div id="main-content">
+      <div class="loading">Loading tiles&hellip;</div>
+    </div>
+  </main>
+
+  <!-- Lightbox -->
+  <div id="lightbox">
+    <div id="lightbox-backdrop"></div>
+    <img id="lightbox-img" src="" alt="Full size tile">
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
